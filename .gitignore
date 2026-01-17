@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.env
+uploads/
+outputs/
+.vscode/
+venv/
+*.log
+.DS_Store
+# Fichiers de test temporaires
+test_*.py
+RMS-YIELD-2026/

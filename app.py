@@ -69,15 +69,27 @@ def preview_excel_sheet():
     data = request.json
     filename = data.get('filename')
     sheet_name = data.get('sheet_name')
+    is_lighthouse = data.get('is_lighthouse', False)
     
     if not filename or not sheet_name:
          return jsonify({'error': 'Paramètres manquants'}), 400
 
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     try:
-        # Just read headers
-        df = excel_handler.read_excel_sheet(filepath, sheet_name)
+        # Custom Lighthouse Logic
+        if is_lighthouse:
+            df = excel_handler.read_lighthouse_excel(filepath, sheet_name)
+            df = excel_handler.clean_lighthouse_data(df)
+        else:
+            # Standard logic
+            df = excel_handler.read_excel_sheet(filepath, sheet_name)
+            
         # Split datetime logic (to match what we do for CSVs)
+        # Note: If Lighthouse format, 'Date' is likely already a date or string 'Jeu 15/01/2026'
+        # split_datetime_columns might be redundant or safe to run. 
+        # Lighthouse dates are like "Jeu 15/01/2026". 
+        # split_datetime_columns looks for ' ' or 'T'.
+        # Let's keep it generic.
         df = split_datetime_columns(df)
         
         cleaned_columns = [clean_column_name(c) for c in df.columns]
@@ -96,15 +108,16 @@ def process_excel_step2():
     filename = data.get('filename')
     sheet_name = data.get('sheet_name')
     target_table_name = data.get('table_name')
-    mode = data.get('mode', 'create') # create or update
+    state_mode = data.get('mode', 'create') # create or update
     selected_columns = data.get('columns', [])
     column_mapping = data.get('column_mapping', {})
+    is_lighthouse = data.get('is_lighthouse', False)
 
     if not filename or not sheet_name or not target_table_name:
         return jsonify({'error': 'Paramètres manquants'}), 400
     
     # Nettoyage du nom de la table pour sécurité SQL si création
-    if mode == 'create':
+    if state_mode == 'create':
         target_table_name = clean_column_name(target_table_name)
     
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
@@ -112,10 +125,14 @@ def process_excel_step2():
         return jsonify({'error': 'Fichier introuvable'}), 404
 
     try:
-        # Lecture (Brute)
-        df = excel_handler.read_excel_sheet(filepath, sheet_name)
+        # Lecture
+        if is_lighthouse:
+            df = excel_handler.read_lighthouse_excel(filepath, sheet_name)
+            df = excel_handler.clean_lighthouse_data(df)
+        else:
+            df = excel_handler.read_excel_sheet(filepath, sheet_name)
         
-        # 1. Split colonnes Datetime (Sur noms bruts)
+        # 1. Split colonnes Datetime
         df = split_datetime_columns(df)
         
         # 2. Nettoyage des noms de colonnes
@@ -123,11 +140,11 @@ def process_excel_step2():
         
         # 3. Filtrage & Mapping (Similaire à CSV)
         if selected_columns:
-            # On ne garde que les colonnes demandées (qui sont déjà cleans dans selected_columns car venant du preview)
+            # On ne garde que les colonnes demandées
             valid_cols = [c for c in selected_columns if c in df.columns]
             df = df[valid_cols]
             
-        if mode == 'append' and column_mapping:
+        if state_mode == 'append' and column_mapping:
             df.rename(columns=column_mapping, inplace=True)
             # Garder uniquement les colonnes mappées (Destination DB names)
             target_cols = set(column_mapping.values())
@@ -141,7 +158,7 @@ def process_excel_step2():
         
     # Push 
         try:
-             response_msg = push_to_supabase(df_clean, target_table_name, mode)
+             response_msg = push_to_supabase(df_clean, target_table_name, state_mode)
              return jsonify({'status': 'success', 'message': response_msg})
         except Exception as e_push:
              import traceback

@@ -500,6 +500,12 @@
                             onchange="handleFileSelect(this, 'excel')" />
                     </div>
 
+                    <div id="excel-options" class="config-box" style="margin-bottom: 15px; display: none;">
+                        <input type="checkbox" id="checkLighthouse" onchange="toggleLighthouseMode()">
+                        <label for="checkLighthouse" style="display:inline; margin-left:8px; cursor:pointer;">Activer
+                            Format Lighthouse</label>
+                    </div>
+
                     <div id="excel-sheet-selector" class="config-box hidden">
                         <label>Choisir l'onglet à importer</label>
                         <div style="display:flex; gap:10px;">
@@ -591,6 +597,7 @@
             fileType: 'csv', // csv | excel
             filename: '',
             sheet: '',
+            isLighthouse: false, // New state
             csvColumns: [],
             dbColumns: []
         };
@@ -599,6 +606,10 @@
         document.addEventListener('DOMContentLoaded', () => {
             loadTables();
         });
+
+        function toggleLighthouseMode() {
+            state.isLighthouse = document.getElementById('checkLighthouse').checked;
+        }
 
         // Tabs
         function switchTab(type) {
@@ -681,6 +692,9 @@
                         alert(e.message);
                     } finally {
                         btn.innerText = file.name;
+                        document.getElementById('excel-options').style.display = 'block'; // Show options
+                        document.getElementById('checkLighthouse').checked = false; // Reset
+                        state.isLighthouse = false;
                     }
                 }
             }
@@ -695,7 +709,7 @@
                 const res = await fetch('/preview_excel', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ filename: state.filename, sheet_name: sheet })
+                    body: JSON.stringify({ filename: state.filename, sheet_name: sheet, is_lighthouse: state.isLighthouse })
                 });
                 const data = await res.json();
                 if (data.error) throw new Error(data.error);
@@ -798,6 +812,7 @@
 
             if (state.fileType === 'excel') {
                 payload.sheet_name = state.sheet;
+                payload.is_lighthouse = state.isLighthouse;
             }
 
             if (state.mode === 'create') {

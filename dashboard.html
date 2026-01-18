@@ -473,25 +473,35 @@
                 showLoader(true);
                 sbClient = supabase.createClient(url, key);
 
-                // Test connection and Fetch Tables using exec_sql
-                console.log("Tentative de connexion à:", url);
-                const { data, error } = await sbClient.rpc('exec_sql', {
-                    query: "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE' ORDER BY table_name;"
-                });
+                console.log("--- Supabase Discovery Start ---");
 
-                if (error) {
-                    if (error.message.includes("401")) throw new Error("Erreur 401: Clé invalide ou accès refusé. Vérifiez votre Clé Service Role.");
-                    if (error.message.includes("404")) throw new Error("Erreur 404: Fonction 'exec_sql' non trouvée. Lancez setup_rpc.py.");
-                    throw error;
+                // Method 1: Try get_public_tables (RPC from setup_rpc.py)
+                let { data: tables, error } = await sbClient.rpc('get_public_tables');
+
+                if (error || !tables || tables.length === 0) {
+                    console.log("Method 1 (get_public_tables) failed or empty, trying Method 2 (exec_sql)...");
+
+                    // Method 2: Fallback to exec_sql with pg_tables
+                    const res2 = await sbClient.rpc('exec_sql', {
+                        query: "SELECT tablename as table_name FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename;"
+                    });
+
+                    if (res2.error) {
+                        console.error("Method 2 failed:", res2.error);
+                        throw new Error("Impossible de lister les tables : " + res2.error.message);
+                    }
+                    tables = res2.data;
                 }
+
+                console.log("Tables found:", tables);
 
                 document.getElementById('login-overlay').style.display = 'none';
                 document.getElementById('main-layout').style.display = 'grid';
 
-                renderTableList(data || []);
+                renderTableList(tables || []);
             } catch (e) {
                 console.error("DEBUG Connection Error:", e);
-                errorEl.innerHTML = `⚠️ <b>Erreur :</b> ${e.message}<br><br><small>Note: Assurez-vous d'ouvrir le fichier situé dans <b>RMS-YIELD-2026/dashboard.html</b> et non une version téléchargée.</small>`;
+                errorEl.innerHTML = `⚠️ <b>Erreur :</b> ${e.message}<br><br><small>Vérifiez que vous utilisez bien la <b>Service Role Key</b> et que vous avez lancé le script <b>setup_rpc.py</b> une fois.</small>`;
                 errorEl.style.display = "block";
             } finally {
                 showLoader(false);

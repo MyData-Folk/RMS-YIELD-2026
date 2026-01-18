@@ -762,21 +762,41 @@
 
         function renderMapping() {
             const container = document.getElementById('mapping-body');
-            container.innerHTML = '';
+            container.innerHTML = `
+                <div class="mapping-row" style="font-weight:bold; margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px;">
+                    <div style="flex:1.5;">Colonne Fichier</div>
+                    <div style="flex:1;">Type Supabase</div>
+                    <div style="flex:1.5;">Destination</div>
+                </div>
+            `;
 
             state.csvColumns.forEach(col => {
                 const row = document.createElement('div');
                 row.className = 'mapping-row';
 
-                let rightSide = '';
+                // Auto-detect type
+                const lCol = col.toLowerCase();
+                let defType = "TEXT";
+                if (lCol.includes('date') || lCol.includes('debut') || lCol.includes('fin')) defType = "DATE";
+                if (lCol.includes('id') || lCol.includes('count')) defType = "BIGINT";
 
+                const typeSelect = `
+                    <select class="type-select" data-src="${col}" style="width:100%;">
+                        <option value="TEXT" ${defType === 'TEXT' ? 'selected' : ''}>TEXT</option>
+                        <option value="DATE" ${defType === 'DATE' ? 'selected' : ''}>DATE</option>
+                        <option value="BIGINT" ${defType === 'BIGINT' ? 'selected' : ''}>BIGINT</option>
+                        <option value="NUMERIC" ${defType === 'NUMERIC' ? 'selected' : ''}>NUMERIC</option>
+                        <option value="BOOLEAN" ${defType === 'BOOLEAN' ? 'selected' : ''}>BOOLEAN</option>
+                    </select>
+                `;
+
+                let rightSide = '';
                 if (state.mode === 'create') {
-                    rightSide = `<span style="color:var(--success); font-size:13px; display:flex; align-items:center; gap:5px;">✅ Création automatique</span>`;
+                    rightSide = `<input type="text" class="mapping-dest" placeholder="Nom destination" data-src="${col}" value="${col}">`;
                 } else {
                     if (state.dbColumns.length === 0) {
-                        rightSide = `<span style="color:var(--error); font-size:12px;">Selectionnez une table ci-dessus</span>`;
+                        rightSide = `<span style="color:var(--error); font-size:12px;">Choisir une table</span>`;
                     } else {
-                        // Auto map logic
                         let bestMatch = "";
                         const cleanSource = normalizeStr(col);
                         state.dbColumns.forEach(db => {
@@ -788,12 +808,15 @@
                             const sel = (db.column_name === bestMatch) ? 'selected' : '';
                             opts += `<option value="${db.column_name}" ${sel}>${db.column_name}</option>`;
                         });
-
-                        rightSide = `<select class="map-select" data-src="${col}">${opts}</select>`;
+                        rightSide = `<select class="map-select mapping-dest" data-src="${col}">${opts}</select>`;
                     }
                 }
 
-                row.innerHTML = `<div class="col-source">${col}</div><div>${rightSide}</div>`;
+                row.innerHTML = `
+                    <div class="col-source" style="flex:1.5;">${col}</div>
+                    <div style="flex:1;">${typeSelect}</div>
+                    <div style="flex:1.5;">${rightSide}</div>
+                `;
                 container.appendChild(row);
             });
         }
@@ -832,38 +855,70 @@
                 }
 
                 const mapping = {};
+                const types = {};
                 const colList = [];
-                document.querySelectorAll('.map-select').forEach(s => {
-                    if (s.value) {
-                        mapping[s.getAttribute('data-src')] = s.value;
-                        colList.push(s.getAttribute('data-src'));
+
+                document.querySelectorAll('.type-select').forEach(s => {
+                    types[s.getAttribute('data-src')] = s.value;
+                });
+
+                document.querySelectorAll('.mapping-dest').forEach(s => {
+                    const src = s.getAttribute('data-src');
+                    if (s.tagName === 'SELECT') {
+                        if (s.value) {
+                            mapping[src] = s.value;
+                            colList.push(src);
+                        }
+                    } else {
+                        // Create mode input
+                        if (s.value) {
+                            mapping[src] = s.value;
+                            colList.push(src);
+                        }
                     }
                 });
 
                 if (colList.length === 0) {
-                    alert("Veuillez mapper au moins une colonne");
+                    alert("Aucune colonne sélectionnée");
                     btn.innerHTML = originalText; btn.disabled = false;
                     return;
                 }
+
                 payload.column_mapping = mapping;
                 payload.columns = colList;
-            }
+                payload.column_types = types;
 
-            // Endpoint switch
-            const endpoint = (state.fileType === 'excel') ? '/process_excel' : '/filter';
+                if (state.mode === 'create') {
+                    payload.table_name = document.getElementById('newTableName').value;
+                    if (!payload.table_name) {
+                        alert("Nom de table requis");
+                        btn.innerHTML = originalText; btn.disabled = false;
+                        return;
+                    }
+                } else {
+                    payload.table_name = document.getElementById('existingTables').value;
+                    if (!payload.table_name) {
+                        alert("Table destination requise");
+                        btn.innerHTML = originalText; btn.disabled = false;
+                        return;
+                    }
+                }
 
-            try {
-                const res = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const d = await res.json();
+                // Endpoint switch
+                const endpoint = (state.fileType === 'excel') ? '/process_excel' : '/filter';
 
-                if (d.error) throw new Error(d.error);
+                try {
+                    const res = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const d = await res.json();
 
-                // Success
-                let html = `
+                    if (d.error) throw new Error(d.error);
+
+                    // Success
+                    let html = `
                     <div class="success-state">
                         <span class="success-icon">🎉</span>
                         <div class="success-msg">${d.message || d.import_status}</div>
@@ -873,17 +928,17 @@
                         </div>
                     </div>
                 `;
-                document.getElementById('result-area').innerHTML = html;
-                document.getElementById('result-area').scrollIntoView({ behavior: 'smooth' });
+                    document.getElementById('result-area').innerHTML = html;
+                    document.getElementById('result-area').scrollIntoView({ behavior: 'smooth' });
 
-            } catch (e) {
-                alert("Erreur: " + e.message);
-                document.getElementById('result-area').innerHTML = `<div style="padding:20px; background:#fef2f2; color:red; border-radius:12px; text-align:center;">❌ ${e.message}</div>`;
-            } finally {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
+                } catch (e) {
+                    alert("Erreur: " + e.message);
+                    document.getElementById('result-area').innerHTML = `<div style="padding:20px; background:#fef2f2; color:red; border-radius:12px; text-align:center;">❌ ${e.message}</div>`;
+                } finally {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
             }
-        }
     </script>
 </body>
 

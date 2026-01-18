@@ -23,10 +23,7 @@ def infer_sql_type(series):
 
     if 'heure' in col_name:
         return 'TEXT' # TIME est trop strict pour des CSV sales
-    elif 'date' in col_name:
-        # On ne se base QUE sur le mot 'date' pour être sûr. 
-        # 'date_d_annulation' contient 'date', donc ça marchera.
-        # 'motif_annulation' ne contient pas 'date', donc ce sera TEXT.
+    elif any(p in col_name for p in ['date', 'debut', 'fin']):
         return 'DATE'
     elif 'int' in dtype:
         return 'BIGINT' # Au cas où
@@ -73,26 +70,20 @@ def split_datetime_columns(df):
         new_df[col] = data
     return new_df
 
-def format_all_dates(df):
+def format_all_dates(df, force_dates=None):
+    if force_dates is None: force_dates = []
     df_formatted = df.copy()
     for col in df.columns:
         col_clean = col.lower()
-        # On ne touche QUE si 'date' est dans le nom (pas 'annulation' tout court)
-        if 'date' in col_clean and 'heure' not in col_clean:
+        # On touche si 'date', 'debut', 'fin' est dans le nom OU si forcé par UI
+        is_date_col = any(p in col_clean for p in ['date', 'debut', 'fin']) or (col in force_dates)
+        
+        if is_date_col and 'heure' not in col_clean:
             # Si déjà datetime (cas Excel), on formate direct
             if pd.api.types.is_datetime64_any_dtype(df[col]):
                  df_formatted[col] = df[col].dt.strftime('%Y-%m-%d').where(df[col].notna(), None)
             else:
-                temp_series = pd.to_datetime(
-                    df[col],
-                    format='%d/%m/%Y', # parsing source (suppose format FR en entrée)
-                    errors='coerce',
-                    dayfirst=True      # Important pour l'input
-                )
-                if temp_series.isna().any():
-                    # Fallback générique
-                    temp_series = pd.to_datetime(df[col], errors='coerce', dayfirst=True)
-                
-                # Modification: Output en YYYY-MM-DD, mais None pour les dates invalides (pas "")
-                df_formatted[col] = temp_series.dt.strftime('%Y-%m-%d').where(temp_series.notna(), None)
+                 # Logic for string parsing
+                 temp_series = pd.to_datetime(df[col], errors='coerce', dayfirst=True)
+                 df_formatted[col] = temp_series.dt.strftime('%Y-%m-%d').where(temp_series.notna(), None)
     return df_formatted

@@ -45,7 +45,9 @@ def read_smart_excel(file_path, sheet_name):
                 if is_planning:
                     print(f"✅ Format Detected: PLANNING (Header row {h_idx+1})")
                     df_melted = parse_planning_format(df_plan)
-                    return clean_generic_numeric_cols(df_melted, exclude=["Date"])
+                    # For Planning, we DON'T replace text with 'x'. 
+                    # We only ensure basic string cleaning (no-break spaces etc)
+                    return clean_generic_numeric_cols(df_melted, exclude=["Date"], apply_x_rule=False)
         except Exception as e:
             print(f"Info: Planning check (header={h_idx}) failed: {e}")
 
@@ -57,7 +59,8 @@ def read_smart_excel(file_path, sheet_name):
             print("✅ Format Detected: LIGHTHOUSE")
             if "Jour Date" in df_light.columns:
                 df_light.rename(columns={"Jour Date": "Date"}, inplace=True)
-            return clean_generic_numeric_cols(df_light, exclude=["Date", "Demande du marché"])
+            # ONLY Lighthouse gets the "text to x" rule
+            return clean_generic_numeric_cols(df_light, exclude=["Date", "Demande du marché"], apply_x_rule=True)
     except Exception as e:
         print(f"Info: Lighthouse format check failed: {e}")
 
@@ -74,15 +77,15 @@ def parse_planning_format(df):
     # Unpivot (Melt)
     df_melted = df.melt(id_vars=fixed_cols, value_vars=date_cols, var_name='Date', value_name='Valeur')
     
-    # Clean Date header (often contains "Price (EUR)" text in mixed rows, we must ignore non-dates)
+    # Clean Date header
     df_melted['Date'] = pd.to_datetime(df_melted['Date'], errors='coerce')
     df_melted = df_melted.dropna(subset=['Date'])
     
     return df_melted
 
-def clean_generic_numeric_cols(df, exclude):
+def clean_generic_numeric_cols(df, exclude, apply_x_rule=True):
     """
-    Replaces non-numeric values in columns NOT in 'exclude' with 'x'.
+    Replaces non-numeric values in columns NOT in 'exclude' with 'x' (IF apply_x_rule is True).
     """
     df_clean = df.copy()
     for col in df_clean.columns:
@@ -96,11 +99,14 @@ def clean_generic_numeric_cols(df, exclude):
             # Simple numeric check
             try:
                 # Handle French format 188,00 -> 188.00
-                v_float = float(s.replace(',', '.').replace(' ', ''))
-                return str(v_float) if v_float.is_integer() else s.replace(',', '.')
+                v_str = s.replace(',', '.').replace(' ', '')
+                float(v_str) # test
+                return v_str
             except ValueError:
-                # It's a comment or status (Pas de flex, Épuisé, LOS2, Fermé...)
-                return "x"
+                # It's a comment or status. 
+                # If apply_x_rule is True (Lighthouse), replace with 'x'.
+                # Else (Planning), keep original string.
+                return "x" if apply_x_rule else s
                 
         df_clean[col] = df_clean[col].apply(clean_val)
     return df_clean

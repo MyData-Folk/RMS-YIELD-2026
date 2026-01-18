@@ -110,6 +110,7 @@ def process_excel_step2():
     state_mode = data.get('mode', 'create') # create or update
     selected_columns = data.get('columns', [])
     column_mapping = data.get('column_mapping', {})
+    column_types = data.get('column_types', {})
     is_lighthouse = data.get('is_lighthouse', False)
 
     if not filename or not sheet_name or not target_table_name:
@@ -148,15 +149,16 @@ def process_excel_step2():
             target_cols = set(column_mapping.values())
             df = df[[c for c in df.columns if c in target_cols]]
 
-        # 4. Formatage dates
-        df_clean = format_all_dates(df)
+        # 4. Formatage dates (incluant les colonnes déclarées DATE par l'user)
+        force_dates = [orig for orig, t in column_types.items() if t == 'DATE']
+        df_clean = format_all_dates(df, force_dates=force_dates)
         
         # 5. Nettoyage '0' / Empty -> None
         df_clean = df_clean.where(pd.notnull(df_clean), None)
         
-    # Push 
+        # Push 
         try:
-             response_msg = push_to_supabase(df_clean, target_table_name, state_mode)
+             response_msg = push_to_supabase(df_clean, target_table_name, state_mode, column_types)
              return jsonify({'status': 'success', 'message': response_msg})
         except Exception as e_push:
              import traceback
@@ -171,17 +173,19 @@ def process_excel_step2():
 
 import requests # Add import
 
-def push_to_supabase(df, table_name, mode):
+def push_to_supabase(df, table_name, mode, column_types=None):
     if not supabase:
          return "Supabase non configuré (Mode local seulement)"
     
+    if column_types is None: column_types = {}
     print(f"DEBUG: push_to_supabase table={table_name} mode={mode} rows={len(df)}")
 
     # Generate Create Table SQL
     if mode == 'create':
         cols_def = []
         for col in df.columns:
-            sql_type = infer_sql_type(df[col])
+            # Use provided type from UI, otherwise infer
+            sql_type = column_types.get(col, infer_sql_type(df[col]))
             cols_def.append(f"{col} {sql_type}")
         
         create_table_sql = f"DROP TABLE IF EXISTS {table_name}; CREATE TABLE {table_name} ({', '.join(cols_def)});"

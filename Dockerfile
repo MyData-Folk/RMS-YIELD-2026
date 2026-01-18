@@ -14,6 +14,11 @@ COPY . .
 # Créer les dossiers nécessaires
 RUN mkdir -p uploads outputs
 
+# Variables d'environnement (Coolify les injectera via docker-compose)
+# Ces lignes permettent de recevoir les variables au runtime
+ENV SUPABASE_URL=${SUPABASE_URL}
+ENV SUPABASE_KEY=${SUPABASE_KEY}
+
 # Exposer le port 5000
 EXPOSE 5000
 

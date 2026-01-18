@@ -27,26 +27,27 @@ def read_smart_excel(file_path, sheet_name):
     Tries to detect the format (Planning vs Lighthouse) and returns a standardized DataFrame.
     """
     
-    # --- STRATEGY 1: Format "Planning" (Header Line 2 / Index 1) ---
-    # Structure: Cols A,B,C data. Col D+ Dates.
-    try:
-        df_plan = pd.read_excel(file_path, sheet_name=sheet_name, header=1, engine='openpyxl')
-        
-        # Detection Heuristic: Check if 4th column (index 3) looks like a date/timestamp
-        if len(df_plan.columns) > 3:
-            col_d = df_plan.columns[3]
-            # Verify if column name is timestamp or contains 202x
-            is_date = (
-                isinstance(col_d, (pd.Timestamp, datetime.datetime)) 
-                or (isinstance(col_d, str) and "202" in col_d)
-            )
-            
-            if is_date:
-                print("✅ Format Detected: PLANNING (Melt required)")
-                return parse_planning_format(df_plan)
+    # --- STRATEGY 1: Format "Planning" (Header Row 1 or 2) ---
+    # We try both header=0 and header=1
+    for h_idx in [0, 1]:
+        try:
+            df_plan = pd.read_excel(file_path, sheet_name=sheet_name, header=h_idx, engine='openpyxl')
+            # Look at columns starting at index 3 (Col D)
+            if len(df_plan.columns) > 3:
+                # We check the first few potential date columns
+                potential_dates = df_plan.columns[3:6]
+                is_planning = any(
+                    isinstance(c, (pd.Timestamp, datetime.datetime)) 
+                    or (isinstance(c, str) and ("202" in c or "/" in c))
+                    for c in potential_dates
+                )
                 
-    except Exception as e:
-        print(f"Info: Planning format check failed: {e}")
+                if is_planning:
+                    print(f"✅ Format Detected: PLANNING (Header row {h_idx+1})")
+                    df_melted = parse_planning_format(df_plan)
+                    return clean_generic_numeric_cols(df_melted, exclude=["Date"])
+        except Exception as e:
+            print(f"Info: Planning check (header={h_idx}) failed: {e}")
 
     # --- STRATEGY 2: Format "Lighthouse / Booking" (Header Line 5 / Index 4) ---
     try:
@@ -54,56 +55,52 @@ def read_smart_excel(file_path, sheet_name):
         # Detection Heuristic: "Jour Date" or "Date" column
         if "Jour Date" in df_light.columns or "Date" in df_light.columns:
             print("✅ Format Detected: LIGHTHOUSE")
-            return clean_lighthouse_data(df_light)
+            if "Jour Date" in df_light.columns:
+                df_light.rename(columns={"Jour Date": "Date"}, inplace=True)
+            return clean_generic_numeric_cols(df_light, exclude=["Date", "Demande du marché"])
     except Exception as e:
         print(f"Info: Lighthouse format check failed: {e}")
 
-    raise ValueError("Format non reconnu (Ni Planning ligne 2, ni Lighthouse ligne 5).")
+    raise ValueError("Format non reconnu (Ni Planning ligne 1/2, ni Lighthouse ligne 5).")
 
 def parse_planning_format(df):
     """
     Transforme le format Planning (Dates en colonnes) en format Base de Données (Dates en lignes)
     """
-    # On suppose que les 3 premières colonnes sont des infos fixes (Chambre, Type, Statut...)
+    # Columns before D are metadata
     fixed_cols = df.columns[0:3].tolist() 
     date_cols = df.columns[3:].tolist()
     
     # Unpivot (Melt)
     df_melted = df.melt(id_vars=fixed_cols, value_vars=date_cols, var_name='Date', value_name='Valeur')
     
-    # Nettoyage Date (Si c'est un header string, convertir)
+    # Clean Date header (often contains "Price (EUR)" text in mixed rows, we must ignore non-dates)
     df_melted['Date'] = pd.to_datetime(df_melted['Date'], errors='coerce')
+    df_melted = df_melted.dropna(subset=['Date'])
     
     return df_melted
 
-def clean_lighthouse_data(df):
+def clean_generic_numeric_cols(df, exclude):
     """
-    Applies specific cleaning for Lighthouse files:
-    - Renames 'Jour Date' -> 'Date'
-    - Replaces non-numeric values in Hotel columns with 'x'
+    Replaces non-numeric values in columns NOT in 'exclude' with 'x'.
     """
     df_clean = df.copy()
-    
-    # 1. Rename Date
-    if "Jour Date" in df_clean.columns:
-        df_clean.rename(columns={"Jour Date": "Date"}, inplace=True)
-        
-    # 2. Clean Hotel Columns
     for col in df_clean.columns:
-        if col in ["Date", "Demande du marché"]:
+        if col in exclude:
             continue
             
         def clean_val(val):
-            if pd.isna(val): return None
-            s = str(val).strip()
-            # Test si numérique
+            if pd.isna(val) or val == "" or val is None: return None
+            s = str(val).strip().replace('\xa0', ' ') # Clean non-breaking spaces
+            
+            # Simple numeric check
             try:
-                float(s.replace(',', '.'))
-                return s
+                # Handle French format 188,00 -> 188.00
+                v_float = float(s.replace(',', '.').replace(' ', ''))
+                return str(v_float) if v_float.is_integer() else s.replace(',', '.')
             except ValueError:
-                # Si texte (ex: "Pas de flex", "Épuisé") -> 'x'
+                # It's a comment or status (Pas de flex, Épuisé, LOS2, Fermé...)
                 return "x"
                 
         df_clean[col] = df_clean[col].apply(clean_val)
-        
     return df_clean

@@ -184,13 +184,13 @@ def push_to_supabase(df, table_name, mode):
             sql_type = infer_sql_type(df[col])
             cols_def.append(f"{col} {sql_type}")
         
-        create_table_sql = f"CREATE TABLE IF NOT EXISTS {table_name} ({', '.join(cols_def)});"
-        print(f"DEBUG: Executing SQL: {create_table_sql[:100]}...")
+        create_table_sql = f"DROP TABLE IF EXISTS {table_name}; CREATE TABLE {table_name} ({', '.join(cols_def)});"
+        print(f"DEBUG: Executing SQL: {create_table_sql[:150]}...")
         
         try:
             supabase.rpc("exec_sql", {"query": create_table_sql}).execute()
         except Exception as e:
-             print(f"❌ Error creating table: {e}")
+             print(f"❌ Error creating/dropping table: {e}")
              raise e
 
         import time

@@ -139,19 +139,27 @@ def process_excel_step2():
         # 5. Nettoyage '0' / Empty -> None
         df_clean = df_clean.where(pd.notnull(df_clean), None)
         
-        # Push 
-        response_msg = push_to_supabase(df_clean, target_table_name, mode)
-        
-        return jsonify({'status': 'success', 'message': response_msg})
+    # Push 
+        try:
+             response_msg = push_to_supabase(df_clean, target_table_name, mode)
+             return jsonify({'status': 'success', 'message': response_msg})
+        except Exception as e_push:
+             import traceback
+             traceback.print_exc()
+             return jsonify({'error': f"Erreur Supabase: {str(e_push)}"}), 500
         
     except Exception as e:
         print(f"Erreur process excel: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 def push_to_supabase(df, table_name, mode):
     if not supabase:
          return "Supabase non configuré (Mode local seulement)"
     
+    print(f"DEBUG: push_to_supabase table={table_name} mode={mode} rows={len(df)}")
+
     # Generate Create Table SQL
     if mode == 'create':
         cols_def = []
@@ -160,7 +168,14 @@ def push_to_supabase(df, table_name, mode):
             cols_def.append(f"{col} {sql_type}")
         
         create_table_sql = f"CREATE TABLE IF NOT EXISTS {table_name} ({', '.join(cols_def)});"
-        supabase.rpc("exec_sql", {"query": create_table_sql}).execute()
+        print(f"DEBUG: Executing SQL: {create_table_sql[:100]}...")
+        
+        try:
+            supabase.rpc("exec_sql", {"query": create_table_sql}).execute()
+        except Exception as e:
+             print(f"❌ Error creating table: {e}")
+             raise e
+
         import time
         time.sleep(1) # Wait for propagation
 
@@ -172,20 +187,19 @@ def push_to_supabase(df, table_name, mode):
     records = df_final.to_dict(orient='records')
     
     # Batch insert
-    batch_size = 100
+    batch_size = 50 # Reduce batch size to avoid 414 URI Too Long ? (Should use POST body though)
     total_inserted = 0
+    
+    print(f"DEBUG: Starting batch insert for {len(records)} records")
+
     for i in range(0, len(records), batch_size):
         batch = records[i:i + batch_size]
-        # Clean timestamps specifically for JSON serialization if needed
-        # (Pandas to_dict handles datetime objects mostly well, but to_json with date_format='iso' is safer usually.
-        # here we use rpc or standard insert? Standard insert expects JSON.
-        # supabase-py client handles dict -> json conversion.
-        # Just ensure dates are strings YYYY-MM-DD or datetime objects.)
-        
-        # Utils.format_all_dates converts to string YYYY-MM-DD so we are good!
-        
-        supabase.table(table_name).insert(batch).execute()
-        total_inserted += len(batch)
+        try:
+            supabase.table(table_name).insert(batch).execute()
+            total_inserted += len(batch)
+        except Exception as e:
+            print(f"❌ Error inserting batch {i}: {e}")
+            raise e
         
     action = "créée et remplie" if mode == 'create' else "mise à jour"
     return f"✅ Table Excel '{table_name}' {action} ({total_inserted} lignes)."

@@ -218,10 +218,19 @@ def filter_columns():
     output_path = os.path.join(app.config['OUTPUT_FOLDER'], output_filename)
     sql_path = os.path.join(app.config['OUTPUT_FOLDER'], f"{output_filename.replace('.csv', '.sql')}")
 
+    # Tentative de lecture robuste (détection séparateur)
     try:
-        df = pd.read_csv(input_path, sep=';', on_bad_lines='skip', encoding='utf-8')
+        # Essai 1: Séparateur ';' (classique FR)
+        df = pd.read_csv(input_path, sep=';', on_bad_lines='skip', encoding='utf-8', engine='python')
+        if len(df.columns) < 2: # Si tout est dans une colonne, c'était probablement pas ';'
+            raise ValueError("Sep not ;")
     except Exception:
-        df = pd.read_csv(input_path, sep=';', on_bad_lines='skip', encoding='latin1')
+        try:
+             # Essai 2: Séparateur ',' (standard)
+            df = pd.read_csv(input_path, sep=',', on_bad_lines='skip', encoding='utf-8', engine='python')
+        except Exception:
+             # Fallback: Encoding latin1 + séparateur ';'
+            df = pd.read_csv(input_path, sep=';', on_bad_lines='skip', encoding='latin1', engine='python')
 
     # Transformation pré-sélection (pour matcher ce qu'on a envoyé au front lors de l'upload)
     
@@ -344,7 +353,12 @@ def filter_columns():
             # 2. Préparation des données
             import json
             # Remplacer None/NaN par np.nan pour que to_json les convertisse en null JSON
-            df_clean = df_filtered.fillna(value=pd.NA)
+            # Remplacer None/NaN par np.nan pour que to_json les convertisse en null JSON
+            # Nettoyage ULTIME : Remplacer tout "0" ou 0 par None dans tout le dataframe
+            df_clean = df_filtered.replace({'0': None, 0: None, '': None, pd.NA: None, float('nan'): None})
+            # S'assurer que les NaNs sont None
+            df_clean = df_clean.where(pd.notnull(df_clean), None)
+            
             records = json.loads(df_clean.to_json(orient='records', date_format='iso'))
             
             # 3. Insertion par lots (batch)
@@ -355,7 +369,7 @@ def filter_columns():
                 batch = records[i:i + batch_size]
                 # DEBUG: Imprimer le premier record pour voir le format des dates
                 if i == 0:
-                    print(f"DEBUG FIRST RECORD: {json.dumps(batch[0], default=str)}")
+                    print(f"DEBUG FIRST RECORD: {json.dumps(batch[0], default=str)}", flush=True)
                 
                 supabase.table(target_table_name).insert(batch).execute()
                 total_inserted += len(batch)

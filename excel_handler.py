@@ -1,6 +1,6 @@
 import pandas as pd
 import openpyxl
-from utils import clean_column_name
+import datetime
 
 def list_sheets(file_path):
     """
@@ -14,29 +14,67 @@ def list_sheets(file_path):
 
 def read_excel_sheet(file_path, sheet_name):
     """
-    Reads a specific sheet from an Excel file into a DataFrame.
+    Reads a specific sheet from an Excel file into a DataFrame (Standard format).
     """
     try:
-        # Lire sans header d'abord pour detecter où commence les données ??
-        # Non, on assume que la 1ere ligne est le header pour l'instant.
-        # Si besoin on pourrait ajouter une option "skiprows" dans l'UI.
         df = pd.read_excel(file_path, sheet_name=sheet_name, engine='openpyxl')
-        
-        # On retourne le DF brut (le nettoyage se fera par l'appelant pour compatibilité avec le logic de split)
         return df
     except Exception as e:
-        raise ValueError(f"Erreur lors de la lecture de l'onglet '{sheet_name}': {e}")
+        raise ValueError(f"Erreur lecture standard: {e}")
 
-def read_lighthouse_excel(file_path, sheet_name):
+def read_smart_excel(file_path, sheet_name):
     """
-    Reads a Lighthouse style Excel file (Header at line 5).
+    Tries to detect the format (Planning vs Lighthouse) and returns a standardized DataFrame.
     """
+    
+    # --- STRATEGY 1: Format "Planning" (Header Line 2 / Index 1) ---
+    # Structure: Cols A,B,C data. Col D+ Dates.
     try:
-        # Header=4 signifie la 5ème ligne (0-indexed)
-        df = pd.read_excel(file_path, sheet_name=sheet_name, header=4, engine='openpyxl')
-        return df
+        df_plan = pd.read_excel(file_path, sheet_name=sheet_name, header=1, engine='openpyxl')
+        
+        # Detection Heuristic: Check if 4th column (index 3) looks like a date/timestamp
+        if len(df_plan.columns) > 3:
+            col_d = df_plan.columns[3]
+            # Verify if column name is timestamp or contains 202x
+            is_date = (
+                isinstance(col_d, (pd.Timestamp, datetime.datetime)) 
+                or (isinstance(col_d, str) and "202" in col_d)
+            )
+            
+            if is_date:
+                print("✅ Format Detected: PLANNING (Melt required)")
+                return parse_planning_format(df_plan)
+                
     except Exception as e:
-        raise ValueError(f"Erreur lecture format Lighthouse: {e}")
+        print(f"Info: Planning format check failed: {e}")
+
+    # --- STRATEGY 2: Format "Lighthouse / Booking" (Header Line 5 / Index 4) ---
+    try:
+        df_light = pd.read_excel(file_path, sheet_name=sheet_name, header=4, engine='openpyxl')
+        # Detection Heuristic: "Jour Date" or "Date" column
+        if "Jour Date" in df_light.columns or "Date" in df_light.columns:
+            print("✅ Format Detected: LIGHTHOUSE")
+            return clean_lighthouse_data(df_light)
+    except Exception as e:
+        print(f"Info: Lighthouse format check failed: {e}")
+
+    raise ValueError("Format non reconnu (Ni Planning ligne 2, ni Lighthouse ligne 5).")
+
+def parse_planning_format(df):
+    """
+    Transforme le format Planning (Dates en colonnes) en format Base de Données (Dates en lignes)
+    """
+    # On suppose que les 3 premières colonnes sont des infos fixes (Chambre, Type, Statut...)
+    fixed_cols = df.columns[0:3].tolist() 
+    date_cols = df.columns[3:].tolist()
+    
+    # Unpivot (Melt)
+    df_melted = df.melt(id_vars=fixed_cols, value_vars=date_cols, var_name='Date', value_name='Valeur')
+    
+    # Nettoyage Date (Si c'est un header string, convertir)
+    df_melted['Date'] = pd.to_datetime(df_melted['Date'], errors='coerce')
+    
+    return df_melted
 
 def clean_lighthouse_data(df):
     """
@@ -51,7 +89,6 @@ def clean_lighthouse_data(df):
         df_clean.rename(columns={"Jour Date": "Date"}, inplace=True)
         
     # 2. Clean Hotel Columns
-    # Tout ce qui n'est pas 'Date' ou 'Demande du marché' est considéré comme un Hotel
     for col in df_clean.columns:
         if col in ["Date", "Demande du marché"]:
             continue

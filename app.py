@@ -76,10 +76,9 @@ def preview_excel_sheet():
 
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     try:
-        # Custom Lighthouse Logic
+        # Custom Smart Logic (Detects Lighthouse or Planning)
         if is_lighthouse:
-            df = excel_handler.read_lighthouse_excel(filepath, sheet_name)
-            df = excel_handler.clean_lighthouse_data(df)
+            df = excel_handler.read_smart_excel(filepath, sheet_name)
         else:
             # Standard logic
             df = excel_handler.read_excel_sheet(filepath, sheet_name)
@@ -127,8 +126,7 @@ def process_excel_step2():
     try:
         # Lecture
         if is_lighthouse:
-            df = excel_handler.read_lighthouse_excel(filepath, sheet_name)
-            df = excel_handler.clean_lighthouse_data(df)
+            df = excel_handler.read_smart_excel(filepath, sheet_name)
         else:
             df = excel_handler.read_excel_sheet(filepath, sheet_name)
         

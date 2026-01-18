@@ -154,6 +154,8 @@ def process_excel_step2():
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
+import requests # Add import
+
 def push_to_supabase(df, table_name, mode):
     if not supabase:
          return "Supabase non configuré (Mode local seulement)"
@@ -187,15 +189,28 @@ def push_to_supabase(df, table_name, mode):
     records = df_final.to_dict(orient='records')
     
     # Batch insert
-    batch_size = 50 # Reduce batch size to avoid 414 URI Too Long ? (Should use POST body though)
+    batch_size = 500 # Can increase back to 500 or 1000 since we use POST body now
     total_inserted = 0
     
-    print(f"DEBUG: Starting batch insert for {len(records)} records")
+    print(f"DEBUG: Starting batch insert for {len(records)} records (Direct HTTP)")
+    
+    headers = {
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal" # Don't return inserted rows (saves bandwidth)
+    }
+    url = f"{SUPABASE_URL.rstrip('/')}/rest/v1/{table_name}"
 
     for i in range(0, len(records), batch_size):
         batch = records[i:i + batch_size]
         try:
-            supabase.table(table_name).insert(batch).execute()
+            # We use direct requests to avoid SDK weirdness (URI Too Long 414)
+            response = requests.post(url, json=batch, headers=headers)
+            
+            if response.status_code not in (200, 201):
+                raise Exception(f"HTTP {response.status_code}: {response.text}")
+                
             total_inserted += len(batch)
         except Exception as e:
             print(f"❌ Error inserting batch {i}: {e}")

@@ -182,11 +182,11 @@ def push_to_supabase(df, table_name, mode):
         time.sleep(1) # Wait for propagation
 
     # Insert Data
-    # Convert to standard python types for JSON
-    df_final = df.replace({pd.NA: None, float('nan'): None})
-    df_final = df_final.where(pd.notnull(df_final), None)
-    
-    records = df_final.to_dict(orient='records')
+    # Convert to standard python types for JSON (handles datetimes -> ISO strings)
+    # We use json.loads(df.to_json) to ensure everything is JSON-compliant (NaN -> null, Dates -> ISO)
+    import json
+    df_final = df.where(pd.notnull(df), None) # Ensure NaNs are None (null in JSON)
+    records = json.loads(df_final.to_json(orient='records', date_format='iso'))
     
     # Batch insert
     batch_size = 500 # Can increase back to 500 or 1000 since we use POST body now

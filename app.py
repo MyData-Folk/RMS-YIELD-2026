@@ -284,8 +284,16 @@ def filter_columns():
 
 
     # Étape 4 : Nettoyer données textuelles (toujours)
+    # Exclure colonnes date/heure pour éviter d'introduire "0" dans des champs DATE/TIME
     for col in df_filtered.select_dtypes(include='object').columns:
+        if 'date' in col or 'heure' in col:
+            continue
         df_filtered[col] = df_filtered[col].astype(str).apply(lambda x: unidecode(x) if pd.notna(x) and x != 'nan' else '')
+
+    # Nettoyage explicite des colonnes date/heure
+    for col in df_filtered.columns:
+        if 'date' in col or 'heure' in col:
+            df_filtered[col] = df_filtered[col].replace({'0': None, 0: None, '': None})
 
     # Étape 5 : Formater toutes les dates en jj/mm/aaaa (toujours)
     df_filtered = format_all_dates(df_filtered)
@@ -345,6 +353,10 @@ def filter_columns():
             
             for i in range(0, len(records), batch_size):
                 batch = records[i:i + batch_size]
+                # DEBUG: Imprimer le premier record pour voir le format des dates
+                if i == 0:
+                    print(f"DEBUG FIRST RECORD: {json.dumps(batch[0], default=str)}")
+                
                 supabase.table(target_table_name).insert(batch).execute()
                 total_inserted += len(batch)
                 

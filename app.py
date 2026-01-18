@@ -218,10 +218,19 @@ def filter_columns():
     output_path = os.path.join(app.config['OUTPUT_FOLDER'], output_filename)
     sql_path = os.path.join(app.config['OUTPUT_FOLDER'], f"{output_filename.replace('.csv', '.sql')}")
 
+    # Tentative de lecture robuste (détection séparateur)
     try:
-        df = pd.read_csv(input_path, sep=';', on_bad_lines='skip', encoding='utf-8')
+        # Essai 1: Séparateur ';' (classique FR)
+        df = pd.read_csv(input_path, sep=';', on_bad_lines='skip', encoding='utf-8', engine='python')
+        if len(df.columns) < 2: # Si tout est dans une colonne, c'était probablement pas ';'
+            raise ValueError("Sep not ;")
     except Exception:
-        df = pd.read_csv(input_path, sep=';', on_bad_lines='skip', encoding='latin1')
+        try:
+             # Essai 2: Séparateur ',' (standard)
+            df = pd.read_csv(input_path, sep=',', on_bad_lines='skip', encoding='utf-8', engine='python')
+        except Exception:
+             # Fallback: Encoding latin1 + séparateur ';'
+            df = pd.read_csv(input_path, sep=';', on_bad_lines='skip', encoding='latin1', engine='python')
 
     # Transformation pré-sélection (pour matcher ce qu'on a envoyé au front lors de l'upload)
     

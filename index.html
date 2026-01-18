@@ -3,38 +3,454 @@
 
 <head>
     <meta charset="UTF-8" />
-    <title>RMS Supabase Sync</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
-        rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SupaSync - RMS Imports</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* Tabs */
-        .tabs {
+        :root {
+            /* Palette Premium Modern */
+            --primary: #6366f1;
+            --primary-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            --secondary: #f472b6;
+            --bg-color: #f8fafc;
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --text-main: #1e293b;
+            --text-sub: #64748b;
+            --border: #e2e8f0;
+            --success: #10b981;
+            --error: #ef4444;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: #eef2ff;
+            background-image:
+                radial-gradient(at 0% 0%, hsla(253, 16%, 7%, 1) 0, transparent 50%),
+                radial-gradient(at 50% 0%, hsla(225, 39%, 30%, 1) 0, transparent 50%),
+                radial-gradient(at 100% 0%, hsla(339, 49%, 30%, 1) 0, transparent 50%);
+            background-image:
+                radial-gradient(at 40% 20%, hsla(28, 100%, 74%, 1) 0px, transparent 50%),
+                radial-gradient(at 80% 0%, hsla(189, 100%, 56%, 1) 0px, transparent 50%),
+                radial-gradient(at 0% 50%, hsla(340, 100%, 76%, 1) 0px, transparent 50%),
+                radial-gradient(at 80% 50%, hsla(240, 100%, 70%, 1) 0px, transparent 50%),
+                radial-gradient(at 0% 100%, hsla(22, 100%, 77%, 1) 0px, transparent 50%),
+                radial-gradient(at 80% 100%, hsla(242, 100%, 70%, 1) 0px, transparent 50%),
+                radial-gradient(at 0% 0%, hsla(343, 100%, 76%, 1) 0px, transparent 50%);
+            background-size: 200% 200%;
+            animation: gradient-anim 15s ease infinite;
+            min-height: 100vh;
             display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 10px;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            color: var(--text-main);
+            margin: 0;
+        }
+
+        @keyframes gradient-anim {
+            0% {
+                background-position: 0% 50%
+            }
+
+            50% {
+                background-position: 100% 50%
+            }
+
+            100% {
+                background-position: 0% 50%
+            }
+        }
+
+        /* Glassmorphism Card */
+        .container {
+            width: 100%;
+            max-width: 850px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 24px;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            padding: 40px 40px 20px 40px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 32px;
+            font-weight: 700;
+            margin: 0;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        p.subtitle {
+            margin-top: 10px;
+            font-size: 16px;
+            color: var(--text-sub);
+        }
+
+        /* Tabs - Modern Toggle */
+        .tabs-container {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0 40px 0;
+            padding: 0 40px;
+        }
+
+        .tabs-wrapper {
+            background: rgba(255, 255, 255, 0.6);
+            padding: 5px;
+            border-radius: 12px;
+            display: flex;
+            gap: 5px;
+            border: 1px solid rgba(0, 0, 0, 0.05);
         }
 
         .tab-btn {
-            background: none;
             border: none;
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--text-light);
-            cursor: pointer;
-            padding: 8px 16px;
+            background: transparent;
+            padding: 10px 24px;
             border-radius: 8px;
-            transition: 0.2s;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-sub);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .tab-btn.active {
-            background: #e0e7ff;
+        .tab-btn:hover {
             color: var(--primary);
         }
 
-        .tab-content {
-            animation: fadeIn 0.3s ease;
+        .tab-btn.active {
+            background: #fff;
+            color: var(--primary);
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* Content Area */
+        .content {
+            padding: 0 40px 40px 40px;
+        }
+
+        /* File Upload Zone */
+        .upload-zone {
+            border: 2px dashed #cbd5e1;
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            transition: all 0.2s;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.5);
+            margin-bottom: 25px;
+            position: relative;
+        }
+
+        .upload-zone:hover,
+        .upload-zone.dragover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .upload-icon {
+            font-size: 40px;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .upload-text {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-main);
+        }
+
+        .upload-hint {
+            font-size: 13px;
+            color: var(--text-sub);
+            margin-top: 5px;
+        }
+
+        input[type="file"] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        /* Forms & Inputs */
+        input[type="text"],
+        select {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: inherit;
+            color: var(--text-main);
+            background: #fff;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            appearance: none;
+            /* remove stock select arrow */
+        }
+
+        select {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 16px center;
+            background-size: 16px;
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-sub);
+        }
+
+        /* Buttons */
+        .btn {
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 15px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn.secondary {
+            background: white;
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            box-shadow: none;
+        }
+
+        .btn.secondary:hover {
+            border-color: #cbd5e1;
+            background: #f8fafc;
+        }
+
+        /* Sections and Steps */
+        .section {
+            margin-bottom: 30px;
+            animation: slideUp 0.4s ease-out;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .section-number {
+            background: #e0e7ff;
+            color: var(--primary);
+            font-weight: 700;
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Mapping Grid */
+        .mapping-container {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: #f9fafb;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .mapping-header {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border);
+            background: #fff;
+            position: sticky;
+            top: 0;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-sub);
+            text-transform: uppercase;
+        }
+
+        .mapping-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border);
+            align-items: center;
+            gap: 20px;
+        }
+
+        .mapping-row:last-child {
+            border-bottom: none;
+        }
+
+        .mapping-row:hover {
+            background: #fff;
+        }
+
+        .col-source {
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        /* Configuration Cards (Mode) */
+        .mode-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .mode-option {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: 0.2s;
+            background: #fff;
+            position: relative;
+        }
+
+        .mode-option:hover {
+            border-color: var(--primary);
+        }
+
+        .mode-option.selected {
+            border-color: var(--primary);
+            background: #eef2ff;
+        }
+
+        .mode-option.selected::after {
+            content: '✓';
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        .mode-title {
+            font-weight: 700;
+            margin-bottom: 5px;
+            color: var(--text-main);
+        }
+
+        .mode-desc {
+            font-size: 13px;
+            color: var(--text-sub);
+            line-height: 1.4;
+        }
+
+        .config-box {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 15px;
+        }
+
+        /* Success State */
+        .success-state {
+            text-align: center;
+            padding: 40px;
+            background: #f0fdf4;
+            border-radius: 16px;
+            border: 1px solid #bbf7d0;
+            margin-top: 20px;
+        }
+
+        .success-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .success-msg {
+            color: #166534;
+            font-weight: 600;
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+
+        .success-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
         }
     </style>
 </head>
@@ -43,142 +459,264 @@
 
     <div class="container">
         <header>
-            <h1>RMS Supabase Sync</h1>
-            <p class="subtitle">Import facile : CSV ou Excel vers Supabase.</p>
+            <h1>SupaSync</h1>
+            <p class="subtitle">La solution élégante pour synchroniser vos données.</p>
         </header>
 
-        <div class="tabs">
-            <button class="tab-btn active" onclick="switchTab('csv')" id="tab-btn-csv">📄 Import CSV</button>
-            <button class="tab-btn" onclick="switchTab('excel')" id="tab-btn-excel">📊 Import Excel</button>
-        </div>
-
-        <!-- STEP 1: CSV -->
-        <div id="tab-csv" class="tab-content step-card">
-            <div class="step-title"><span class="step-number">1</span> Sélection du fichier CSV</div>
-            <div style="display: flex; gap: 10px;">
-                <input type="file" id="csvFile" accept=".csv" />
-                <button class="btn" onclick="uploadCsv()">Analyser CSV</button>
+        <div class="tabs-container">
+            <div class="tabs-wrapper">
+                <button class="tab-btn active" onclick="switchTab('csv')" id="tab-btn-csv">
+                    📄 Fichier CSV
+                </button>
+                <button class="tab-btn" onclick="switchTab('excel')" id="tab-btn-excel">
+                    📊 Fichier Excel
+                </button>
             </div>
         </div>
 
-        <!-- STEP 1: EXCEL -->
-        <div id="tab-excel" class="tab-content step-card hidden">
-            <div class="step-title"><span class="step-number">1</span> Séléction du fichier Excel</div>
-            <div style="display: flex; gap: 10px; flex-direction: column;">
-                <div style="display: flex; gap: 10px;">
-                    <input type="file" id="excelFile" accept=".xlsx, .xls" />
-                    <button class="btn" onclick="uploadExcel()">Scanner le fichier</button>
+        <div class="content">
+
+            <!-- STEP 1: UPLOAD -->
+            <div id="step-upload" class="section">
+
+                <!-- CSV View -->
+                <div id="view-csv">
+                    <div class="upload-zone" onclick="document.getElementById('csvFile').click()">
+                        <span class="upload-icon">📂</span>
+                        <div class="upload-text">Cliquez pour choisir un CSV</div>
+                        <div class="upload-hint">ou glissez-déposez votre fichier ici</div>
+                        <input type="file" id="csvFile" accept=".csv" onchange="handleFileSelect(this, 'csv')" />
+                    </div>
                 </div>
 
-                <div id="excel-sheet-area" class="hidden"
-                    style="margin-top: 15px; padding-top:15px; border-top:1px dashed #eee;">
-                    <label>Choisir l'onglet à importer :</label>
+                <!-- Excel View -->
+                <div id="view-excel" class="hidden">
+                    <div class="upload-zone" onclick="document.getElementById('excelFile').click()">
+                        <span class="upload-icon">📗</span>
+                        <div class="upload-text">Cliquez pour choisir un Excel</div>
+                        <div class="upload-hint">Format .xlsx ou .xls supporté</div>
+                        <input type="file" id="excelFile" accept=".xlsx, .xls"
+                            onchange="handleFileSelect(this, 'excel')" />
+                    </div>
+
+                    <div id="excel-sheet-selector" class="config-box hidden">
+                        <label>Choisir l'onglet à importer</label>
+                        <div style="display:flex; gap:10px;">
+                            <select id="sheetSelect"></select>
+                            <button class="btn" style="width: auto;" onclick="confirmExcelSheet()">Valider</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- STEP 2: CONFIGURATION -->
+            <div id="step-config" class="section hidden">
+                <div class="section-header">
+                    <div class="section-number">2</div>
+                    <div class="section-title">Configuration</div>
+                </div>
+
+                <div class="mode-selector">
+                    <div class="mode-option selected" id="opt-create" onclick="setMode('create')">
+                        <div class="mode-title">✨ Créer une nouvelle table</div>
+                        <div class="mode-desc">Crée automatiquement la table dans Supabase avec les bonnes colonnes.
+                        </div>
+                    </div>
+                    <div class="mode-option" id="opt-append" onclick="setMode('append')">
+                        <div class="mode-title">📥 Mettre à jour (Append)</div>
+                        <div class="mode-desc">Ajoute les données à une table existante. Idéal pour les imports
+                            récurrents.</div>
+                    </div>
+                </div>
+
+                <!-- Create Config -->
+                <div id="config-create" class="config-box">
+                    <label>Nom de la future table</label>
+                    <input type="text" id="newTableName" placeholder="ex: reservations_2026_janvier" />
+                </div>
+
+                <!-- Append Config -->
+                <div id="config-append" class="config-box hidden">
+                    <label>Table de destination</label>
                     <div style="display:flex; gap:10px;">
-                        <select id="sheetSelect"></select>
-                        <button class="btn" onclick="confirmExcelSheet()">Valider cet onglet</button>
+                        <select id="existingTables" onchange="enableMapping()">
+                            <option value="">Chargement...</option>
+                        </select>
+                        <button class="btn secondary" style="width:50px;" onclick="loadTables()">↻</button>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- STEP 2 -->
-        <div id="step-config" class="step-card hidden">
-            <div class="step-title"><span class="step-number">2</span> Configuration</div>
+            <!-- STEP 3: MAPPING -->
+            <div id="step-mapping" class="section hidden">
+                <div class="section-header">
+                    <div class="section-number">3</div>
+                    <div class="section-title">Mapping des colonnes</div>
+                </div>
 
-            <div class="mode-options">
-                <input type="radio" id="mode-create" name="mode" value="create" class="mode-radio" checked
-                    onchange="toggleMode()">
-                <label for="mode-create" class="mode-label">✨ Nouvelle Table</label>
+                <div style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center;">
+                    <input type="checkbox" id="saveStorage" checked style="width: 16px; height: 16px;">
+                    <label for="saveStorage" style="margin:0; cursor:pointer;">Sauvegarder une copie du fichier dans
+                        Supabase Storage</label>
+                </div>
 
-                <input type="radio" id="mode-append" name="mode" value="append" class="mode-radio"
-                    onchange="toggleMode()">
-                <label for="mode-append" class="mode-label">📥 Mise à jour (Append)</label>
-            </div>
+                <div class="mapping-container">
+                    <div class="mapping-header">
+                        <div>Colonne du Fichier</div>
+                        <div>Destination Supabase</div>
+                    </div>
+                    <div id="mapping-body"></div>
+                </div>
 
-            <!-- Create Mode Options -->
-            <div id="opts-create">
-                <label>Nom de la nouvelle table</label>
-                <input type="text" id="newTableName" placeholder="Ex: reservations_2026" />
-            </div>
-
-            <!-- Append Mode Options -->
-            <div id="opts-append" class="hidden">
-                <label>Table de destination</label>
-                <div style="display:flex; gap:10px;">
-                    <select id="existingTables" onchange="enableMapping()">
-                        <option value="">Chargement...</option>
-                    </select>
-                    <button class="btn secondary" onclick="loadTables()" title="Actualiser">🔄</button>
+                <div style="margin-top: 30px;">
+                    <button class="btn" onclick="processImport()" id="btn-process">
+                        🚀 Lancer l'importation
+                    </button>
                 </div>
             </div>
+
+            <!-- Result Area -->
+            <div id="result-area"></div>
+
         </div>
-
-        <!-- STEP 3 -->
-        <div id="step-mapping" class="step-card hidden">
-            <div class="step-title"><span class="step-number">3</span> Mapping & Options</div>
-
-            <div style="margin-bottom: 20px;">
-                <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-                    <input type="checkbox" id="saveStorage" checked style="width:auto; transform:scale(1.2);">
-                    ☁️ Sauvegarder le CSV transformé dans Supabase Storage
-                </label>
-            </div>
-
-            <div id="mapping-header"
-                style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 10px; font-size: 12px; text-transform: uppercase; color: #94a3b8; font-weight: 700; padding: 0 10px;">
-                <div>Colonne CSV (Source)</div>
-                <div>Colonne DB (Cible)</div>
-            </div>
-
-            <div id="mapping-container" class="mapping-grid"></div>
-
-            <button id="actionBtn" class="btn full" onclick="processImport()">Lancer l'importation</button>
-        </div>
-
-        <div id="result-area"></div>
-
     </div>
 
+    <!-- MAIN SCRIPT -->
     <script>
-        let csvColumns = [];
-        let dbColumns = [];
-        let currentFilename = '';
-        let currentMode = 'csv'; // 'csv' or 'excel'
-        let currentSheet = '';
+        // State
+        let state = {
+            mode: 'create', // create | append
+            fileType: 'csv', // csv | excel
+            filename: '',
+            sheet: '',
+            csvColumns: [],
+            dbColumns: []
+        };
 
         // Init
-        loadTables();
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTables();
+        });
 
-        function switchTab(mode) {
-            currentMode = mode;
-            // UI Update
+        // Tabs
+        function switchTab(type) {
+            state.fileType = type;
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(`tab-btn-${mode}`).classList.add('active');
+            document.getElementById(`tab-btn-${type}`).classList.add('active');
 
-            document.getElementById('tab-csv').classList.add('hidden');
-            document.getElementById('tab-excel').classList.add('hidden');
-            document.getElementById(`tab-${mode}`).classList.remove('hidden');
+            document.getElementById('view-csv').classList.toggle('hidden', type !== 'csv');
+            document.getElementById('view-excel').classList.toggle('hidden', type !== 'excel');
 
-            // Reset States
+            // Reset UI slightly
+            hideSteps();
+        }
+
+        function hideSteps() {
             document.getElementById('step-config').classList.add('hidden');
             document.getElementById('step-mapping').classList.add('hidden');
             document.getElementById('result-area').innerHTML = '';
-            currentFilename = '';
-            currentSheet = '';
-            csvColumns = [];
         }
 
-        function normalizeStr(str) {
-            return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+        // Mode Selector
+        function setMode(mode) {
+            state.mode = mode;
+            document.querySelectorAll('.mode-option').forEach(el => el.classList.remove('selected'));
+            document.getElementById(`opt-${mode}`).classList.add('selected');
+
+            document.getElementById('config-create').classList.toggle('hidden', mode !== 'create');
+            document.getElementById('config-append').classList.toggle('hidden', mode !== 'append');
+
+            if (state.csvColumns.length > 0) renderMapping();
         }
 
-        function toggleMode() {
-            const mode = document.querySelector('input[name="mode"]:checked').value;
-            document.getElementById('opts-create').classList.toggle('hidden', mode !== 'create');
-            document.getElementById('opts-append').classList.toggle('hidden', mode !== 'append');
-            if (csvColumns.length) renderMapping();
+        // File Handling
+        async function handleFileSelect(input, type) {
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+
+                // Visual feedback on the upload name
+                const zoneText = input.previousElementSibling.previousElementSibling;
+                zoneText.innerText = file.name;
+
+                const fd = new FormData();
+                fd.append('file', file);
+
+                if (type === 'csv') {
+                    const btn = document.querySelector('#view-csv .upload-text');
+                    btn.innerText = "Analyse en cours...";
+                    try {
+                        const res = await fetch('/upload', { method: 'POST', body: fd });
+                        const data = await res.json();
+                        if (data.error) throw new Error(data.error);
+
+                        state.filename = data.filename;
+                        state.csvColumns = data.columns;
+                        showConfig();
+                    } catch (e) {
+                        alert(e.message);
+                    } finally {
+                        btn.innerText = file.name; // Keep name
+                    }
+                } else {
+                    // Excel
+                    const btn = document.querySelector('#view-excel .upload-text');
+                    btn.innerText = "Lecture des onglets...";
+                    try {
+                        const res = await fetch('/upload_excel', { method: 'POST', body: fd });
+                        const data = await res.json();
+                        if (data.error) throw new Error(data.error);
+
+                        state.filename = data.filename;
+                        // Populate sheets
+                        const sel = document.getElementById('sheetSelect');
+                        sel.innerHTML = '';
+                        data.sheets.forEach(s => {
+                            const opt = document.createElement('option');
+                            opt.value = s; opt.innerText = s; sel.appendChild(opt);
+                        });
+                        document.getElementById('excel-sheet-selector').classList.remove('hidden');
+                    } catch (e) {
+                        alert(e.message);
+                    } finally {
+                        btn.innerText = file.name;
+                    }
+                }
+            }
         }
 
+        async function confirmExcelSheet() {
+            const sheet = document.getElementById('sheetSelect').value;
+            if (!sheet) return;
+            state.sheet = sheet;
+
+            try {
+                const res = await fetch('/preview_excel', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename: state.filename, sheet_name: sheet })
+                });
+                const data = await res.json();
+                if (data.error) throw new Error(data.error);
+
+                state.csvColumns = data.columns;
+                showConfig();
+            } catch (e) {
+                alert(e.message);
+            }
+        }
+
+        function showConfig() {
+            document.getElementById('step-config').classList.remove('hidden');
+            document.getElementById('step-mapping').classList.remove('hidden');
+            renderMapping();
+            // Smooth scroll
+            setTimeout(() => {
+                document.getElementById('step-config').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        }
+
+        // Tables & Mapping
         async function loadTables() {
             try {
                 const res = await fetch('/tables');
@@ -188,161 +726,95 @@
                 if (data.length) {
                     data.forEach(t => {
                         const opt = document.createElement('option');
-                        opt.value = t.table_name;
-                        opt.innerText = t.table_name;
-                        sel.appendChild(opt);
+                        opt.value = t.table_name; opt.innerText = t.table_name; sel.appendChild(opt);
                     });
                 }
             } catch (e) { console.error(e); }
         }
 
-        // --- CSV LOGIC ---
-        async function uploadCsv() {
-            const file = document.getElementById('csvFile').files[0];
-            if (!file) return alert("Sélectionnez un fichier CSV");
-
-            const fd = new FormData();
-            fd.append('file', file);
-
-            const res = await fetch('/upload', { method: 'POST', body: fd });
-            const data = await res.json();
-
-            if (data.error) return alert(data.error);
-
-            currentFilename = data.filename;
-            csvColumns = data.columns;
-
-            goToConfigStep();
-        }
-
-        // --- EXCEL LOGIC ---
-        async function uploadExcel() {
-            const file = document.getElementById('excelFile').files[0];
-            if (!file) return alert("Sélectionnez un fichier Excel");
-
-            const fd = new FormData();
-            fd.append('file', file);
-
-            // Show loading state
-            const btn = document.querySelector('#tab-excel button');
-            const originalText = btn.innerText;
-            btn.innerText = "⏳ Analyse...";
-
-            try {
-                const res = await fetch('/upload_excel', { method: 'POST', body: fd });
-                const data = await res.json();
-
-                if (data.error) throw new Error(data.error);
-
-                currentFilename = data.filename;
-
-                // Show sheets
-                const sel = document.getElementById('sheetSelect');
-                sel.innerHTML = '';
-                data.sheets.forEach(s => {
-                    const opt = document.createElement('option');
-                    opt.value = s;
-                    opt.innerText = s;
-                    sel.appendChild(opt);
-                });
-
-                document.getElementById('excel-sheet-area').classList.remove('hidden');
-
-            } catch (e) {
-                alert(e.message);
-            } finally {
-                btn.innerText = originalText;
-            }
-        }
-
-        async function confirmExcelSheet() {
-            currentSheet = document.getElementById('sheetSelect').value;
-            if (!currentSheet) return alert("Choisissez un onglet");
-
-            // Fetch columns for preview/mapping
-            const res = await fetch('/preview_excel', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ filename: currentFilename, sheet_name: currentSheet })
-            });
-            const data = await res.json();
-
-            if (data.error) return alert(data.error);
-
-            csvColumns = data.columns;
-            goToConfigStep();
-        }
-
-        function goToConfigStep() {
-            document.getElementById('step-config').classList.remove('hidden');
-            document.getElementById('step-mapping').classList.remove('hidden');
-            renderMapping();
-            // Scroll to step 2
-            document.getElementById('step-config').scrollIntoView({ behavior: 'smooth' });
-        }
-
         async function enableMapping() {
             const table = document.getElementById('existingTables').value;
             if (!table) return;
+
             const res = await fetch(`/tables/${table}/columns`);
-            dbColumns = await res.json();
+            state.dbColumns = await res.json();
             renderMapping();
         }
 
-        function renderMapping() {
-            const container = document.getElementById('mapping-container');
-            container.innerHTML = '';
-            const mode = document.querySelector('input[name="mode"]:checked').value;
+        function normalizeStr(str) {
+            return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+        }
 
-            csvColumns.forEach(col => {
+        function renderMapping() {
+            const container = document.getElementById('mapping-body');
+            container.innerHTML = '';
+
+            state.csvColumns.forEach(col => {
                 const row = document.createElement('div');
                 row.className = 'mapping-row';
 
                 let rightSide = '';
 
-                if (mode === 'create') {
-                    rightSide = `<div style="color:#64748b; font-size:13px;">✅ Sera créée auto</div>`;
+                if (state.mode === 'create') {
+                    rightSide = `<span style="color:var(--success); font-size:13px; display:flex; align-items:center; gap:5px;">✅ Création automatique</span>`;
                 } else {
-                    if (dbColumns.length === 0) {
-                        rightSide = `<span style="font-size:12px; color:#ef4444;">Choisir une table d'abord</span>`;
+                    if (state.dbColumns.length === 0) {
+                        rightSide = `<span style="color:var(--error); font-size:12px;">Selectionnez une table ci-dessus</span>`;
                     } else {
+                        // Auto map logic
                         let bestMatch = "";
                         const cleanSource = normalizeStr(col);
-                        dbColumns.forEach(db => {
+                        state.dbColumns.forEach(db => {
                             if (normalizeStr(db.column_name) === cleanSource) bestMatch = db.column_name;
                         });
 
                         let opts = `<option value="">-- Ignorer --</option>`;
-                        dbColumns.forEach(db => {
+                        state.dbColumns.forEach(db => {
                             const sel = (db.column_name === bestMatch) ? 'selected' : '';
                             opts += `<option value="${db.column_name}" ${sel}>${db.column_name}</option>`;
                         });
+
                         rightSide = `<select class="map-select" data-src="${col}">${opts}</select>`;
                     }
                 }
+
                 row.innerHTML = `<div class="col-source">${col}</div><div>${rightSide}</div>`;
                 container.appendChild(row);
             });
         }
 
         async function processImport() {
-            const mode = document.querySelector('input[name="mode"]:checked').value;
+            const btn = document.getElementById('btn-process');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = `⏳ Traitement...`;
+            btn.disabled = true;
+
             const payload = {
-                filename: currentFilename,
-                mode: mode,
+                filename: state.filename,
+                mode: state.mode,
                 save_storage: document.getElementById('saveStorage').checked
             };
 
-            // Excel specific
-            if (currentMode === 'excel') {
-                payload.sheet_name = currentSheet;
+            if (state.fileType === 'excel') {
+                payload.sheet_name = state.sheet;
             }
 
-            if (mode === 'create') {
+            if (state.mode === 'create') {
                 payload.table_name = document.getElementById('newTableName').value;
-                payload.columns = csvColumns;
+                if (!payload.table_name) {
+                    alert("Nom de table requis");
+                    btn.innerHTML = originalText; btn.disabled = false;
+                    return;
+                }
+                payload.columns = state.csvColumns;
             } else {
                 payload.table_name = document.getElementById('existingTables').value;
+                if (!payload.table_name) {
+                    alert("Table destination requise");
+                    btn.innerHTML = originalText; btn.disabled = false;
+                    return;
+                }
+
                 const mapping = {};
                 const colList = [];
                 document.querySelectorAll('.map-select').forEach(s => {
@@ -351,16 +823,18 @@
                         colList.push(s.getAttribute('data-src'));
                     }
                 });
-                if (colList.length === 0) return alert("Mappez au moins une colonne");
 
+                if (colList.length === 0) {
+                    alert("Veuillez mapper au moins une colonne");
+                    btn.innerHTML = originalText; btn.disabled = false;
+                    return;
+                }
                 payload.column_mapping = mapping;
                 payload.columns = colList;
             }
 
-            document.getElementById('result-area').innerHTML = '<div style="text-align:center; padding:20px;">⏳ Traitement en cours...</div>';
-
-            // Determine endpoint
-            const endpoint = (currentMode === 'excel') ? '/process_excel' : '/filter';
+            // Endpoint switch
+            const endpoint = (state.fileType === 'excel') ? '/process_excel' : '/filter';
 
             try {
                 const res = await fetch(endpoint, {
@@ -370,26 +844,28 @@
                 });
                 const d = await res.json();
 
-                if (d.error) {
-                    document.getElementById('result-area').innerHTML = `<div style="color:red; background:#fef2f2; padding:15px; border-radius:8px;">❌ ${d.error}</div>`;
-                    return;
-                }
+                if (d.error) throw new Error(d.error);
 
-                let html = `<div class="success-box"><h3>🎉 Succès !</h3><p>${d.message || d.import_status}</p>`; // Handle both response formats
-
-                // Show links only if present
-                html += `<div class="link-group">`;
-                if (d.download_url) html += `<a href="${d.download_url}" target="_blank" class="btn secondary">📥 CSV Local</a>`;
-                if (d.storage_url) html += `<a href="${d.storage_url}" target="_blank" class="btn secondary">☁️ Cloud (Storage)</a>`;
-                html += `</div></div>`;
-
-                if (d.create_table_sql) {
-                    html += `<details style="margin-top:15px; cursor:pointer;"><summary style="color:#64748b;">Voir SQL</summary><pre style="background:#1e293b; color:#fff; padding:10px; border-radius:6px; font-size:12px;">${d.create_table_sql}</pre></details>`;
-                }
+                // Success
+                let html = `
+                    <div class="success-state">
+                        <span class="success-icon">🎉</span>
+                        <div class="success-msg">${d.message || d.import_status}</div>
+                        <div class="success-actions">
+                            ${d.download_url ? `<a href="${d.download_url}" target="_blank" class="btn secondary" style="width:auto">📥 CSV Local</a>` : ''}
+                            ${d.storage_url ? `<a href="${d.storage_url}" target="_blank" class="btn secondary" style="width:auto">☁️ Voir Storage</a>` : ''}
+                        </div>
+                    </div>
+                `;
                 document.getElementById('result-area').innerHTML = html;
+                document.getElementById('result-area').scrollIntoView({ behavior: 'smooth' });
 
             } catch (e) {
-                alert("Erreur réseau: " + e.message);
+                alert("Erreur: " + e.message);
+                document.getElementById('result-area').innerHTML = `<div style="padding:20px; background:#fef2f2; color:red; border-radius:12px; text-align:center;">❌ ${e.message}</div>`;
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
             }
         }
     </script>

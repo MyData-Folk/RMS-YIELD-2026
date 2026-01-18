@@ -31,100 +31,161 @@ OUTPUT_FOLDER = 'outputs'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='.')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['OUTPUT_FOLDER'] = OUTPUT_FOLDER
 
-# Colonnes datetime à splitter
-DATETIME_COLUMNS = {
-    "Date d'achat": ("date_d_achat", "heure_d_achat"),
-    "Dernière modification": ("date_modification", "heure_modification"),
-    "Date d'annulation": ("date_d_annulation", "heure_d_annulation")
-}
+from utils import clean_column_name, infer_sql_type, split_datetime_columns, format_all_dates
+import excel_handler
 
-def clean_column_name(name):
-    name = unidecode(name.strip())
-    name = re.sub(r'[^a-zA-Z0-9_]', '_', name)
-    name = re.sub(r'_+', '_', name)
-    if name and name[0].isdigit():
-        name = 'col_' + name
-    return name.lower()
+# ... (Configuration Supabase reste ici)
 
-def infer_sql_type(series):
-    col_name = series.name.lower() if series.name else ""
-    dtype = str(series.dtype)
+@app.route('/upload_excel', methods=['POST'])
+def upload_excel_step1():
+    if 'file' not in request.files:
+        return jsonify({'error': 'Aucun fichier'}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'Aucun fichier sélectionné'}), 400
+    
+    if not file.filename.endswith(('.xlsx', '.xls')):
+        return jsonify({'error': 'Format fichier invalide (attendu: .xlsx, .xls)'}), 400
 
-    if 'heure' in col_name:
-        return 'TEXT' # TIME est trop strict pour des CSV sales
-    elif 'date' in col_name:
-        # On ne se base QUE sur le mot 'date' pour être sûr. 
-        # 'date_d_annulation' contient 'date', donc ça marchera.
-        # 'motif_annulation' ne contient pas 'date', donc ce sera TEXT.
-        return 'DATE'
-    elif 'int' in dtype:
-        return 'BIGINT' # Au cas où
-    elif 'float' in dtype:
-        return 'TEXT' # Eviter NUMERIC sur des floats qui peuvent être NaN ou scientific notation
-    elif 'email' in col_name:
-        return 'VARCHAR(255)'
-    else:
-        return 'TEXT' # Sécurité maximale
-
-def parse_datetime_safe(val):
-    if not isinstance(val, str):
-        return None  # ← Important : pas pd.NaT
-    val = val.strip()
-    if not val:
-        return None
-    val = ' '.join(val.split())
+    filename = str(uuid.uuid4()) + "_" + unidecode(file.filename)
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(filepath)
+    
     try:
-        dt = pd.to_datetime(val, format='%d/%m/%Y %H:%M:%S', errors='coerce', dayfirst=True)
-        if pd.notna(dt):
-            return dt
-        dt = pd.to_datetime(val, format='%d/%m/%Y %H:%M', errors='coerce', dayfirst=True)
-        if pd.notna(dt):
-            return dt
-        dt = pd.to_datetime(val, errors='coerce', dayfirst=True)
-        return dt
-    except Exception:
-        return None
+        sheets = excel_handler.list_sheets(filepath)
+        return jsonify({
+            'filename': filename,
+            'sheets': sheets
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
-def split_datetime_columns(df):
-    new_df = df.copy()
-    datetime_cols = {}
-    for col_fr, (date_col, time_col) in DATETIME_COLUMNS.items():
-        if col_fr in df.columns:
-            temp_series = df[col_fr].apply(parse_datetime_safe)
-            temp_series = pd.to_datetime(temp_series, errors='coerce')
-            # Modification: Format ISO YYYY-MM-DD pour compatibilité SQL, None pour dates vides
-            date_vals = temp_series.dt.strftime('%Y-%m-%d').where(temp_series.notna(), None)
-            time_vals = temp_series.dt.strftime('%H:%M:%S').where(temp_series.notna(), None)
-            datetime_cols[date_col] = date_vals
-            datetime_cols[time_col] = time_vals
-            new_df.drop(columns=[col_fr], inplace=True)
-    for col, data in datetime_cols.items():
-        new_df[col] = data
-    return new_df
+@app.route('/preview_excel', methods=['POST'])
+def preview_excel_sheet():
+    data = request.json
+    filename = data.get('filename')
+    sheet_name = data.get('sheet_name')
+    
+    if not filename or not sheet_name:
+         return jsonify({'error': 'Paramètres manquants'}), 400
 
-def format_all_dates(df):
-    df_formatted = df.copy()
-    for col in df.columns:
-        col_clean = col.lower()
-        # On ne touche QUE si 'date' est dans le nom (pas 'annulation' tout court)
-        if 'date' in col_clean and 'heure' not in col_clean:
-            temp_series = pd.to_datetime(
-                df[col],
-                format='%d/%m/%Y', # parsing source (suppose format FR en entrée)
-                errors='coerce',
-                dayfirst=True      # Important pour l'input
-            )
-            if temp_series.isna().any():
-                # Fallback générique
-                temp_series = pd.to_datetime(df[col], errors='coerce', dayfirst=True)
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    try:
+        # Just read headers
+        df = excel_handler.read_excel_sheet(filepath, sheet_name)
+        # Split datetime logic (to match what we do for CSVs)
+        df = split_datetime_columns(df)
+        
+        cleaned_columns = [clean_column_name(c) for c in df.columns]
+        return jsonify({
+            'filename': filename,
+            'columns': cleaned_columns
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+
+@app.route('/process_excel', methods=['POST'])
+def process_excel_step2():
+    data = request.json
+    filename = data.get('filename')
+    sheet_name = data.get('sheet_name')
+    target_table_name = data.get('table_name')
+    mode = data.get('mode', 'create') # create or update
+    selected_columns = data.get('columns', [])
+    column_mapping = data.get('column_mapping', {})
+
+    if not filename or not sheet_name or not target_table_name:
+        return jsonify({'error': 'Paramètres manquants'}), 400
+    
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    if not os.path.exists(filepath):
+        return jsonify({'error': 'Fichier introuvable'}), 404
+
+    try:
+        # Lecture (Brute)
+        df = excel_handler.read_excel_sheet(filepath, sheet_name)
+        
+        # 1. Split colonnes Datetime (Sur noms bruts)
+        df = split_datetime_columns(df)
+        
+        # 2. Nettoyage des noms de colonnes
+        df.columns = [clean_column_name(c) for c in df.columns]
+        
+        # 3. Filtrage & Mapping (Similaire à CSV)
+        if selected_columns:
+            # On ne garde que les colonnes demandées (qui sont déjà cleans dans selected_columns car venant du preview)
+            valid_cols = [c for c in selected_columns if c in df.columns]
+            df = df[valid_cols]
             
-            # Modification: Output en YYYY-MM-DD, mais None pour les dates invalides (pas "")
-            df_formatted[col] = temp_series.dt.strftime('%Y-%m-%d').where(temp_series.notna(), None)
-    return df_formatted
+        if mode == 'append' and column_mapping:
+            df.rename(columns=column_mapping, inplace=True)
+            # Garder uniquement les colonnes mappées (Destination DB names)
+            target_cols = set(column_mapping.values())
+            df = df[[c for c in df.columns if c in target_cols]]
+
+        # 4. Formatage dates
+        df_clean = format_all_dates(df)
+        
+        # 5. Nettoyage '0' / Empty -> None
+        df_clean = df_clean.where(pd.notnull(df_clean), None)
+        
+        # Push 
+        response_msg = push_to_supabase(df_clean, target_table_name, mode)
+        
+        return jsonify({'status': 'success', 'message': response_msg})
+        
+    except Exception as e:
+        print(f"Erreur process excel: {e}")
+        return jsonify({'error': str(e)}), 500
+
+def push_to_supabase(df, table_name, mode):
+    if not supabase:
+         return "Supabase non configuré (Mode local seulement)"
+    
+    # Generate Create Table SQL
+    if mode == 'create':
+        cols_def = []
+        for col in df.columns:
+            sql_type = infer_sql_type(df[col])
+            cols_def.append(f"{col} {sql_type}")
+        
+        create_table_sql = f"CREATE TABLE IF NOT EXISTS {table_name} ({', '.join(cols_def)});"
+        supabase.rpc("exec_sql", {"query": create_table_sql}).execute()
+        import time
+        time.sleep(1) # Wait for propagation
+
+    # Insert Data
+    # Convert to standard python types for JSON
+    df_final = df.replace({pd.NA: None, float('nan'): None})
+    df_final = df_final.where(pd.notnull(df_final), None)
+    
+    records = df_final.to_dict(orient='records')
+    
+    # Batch insert
+    batch_size = 100
+    total_inserted = 0
+    for i in range(0, len(records), batch_size):
+        batch = records[i:i + batch_size]
+        # Clean timestamps specifically for JSON serialization if needed
+        # (Pandas to_dict handles datetime objects mostly well, but to_json with date_format='iso' is safer usually.
+        # here we use rpc or standard insert? Standard insert expects JSON.
+        # supabase-py client handles dict -> json conversion.
+        # Just ensure dates are strings YYYY-MM-DD or datetime objects.)
+        
+        # Utils.format_all_dates converts to string YYYY-MM-DD so we are good!
+        
+        supabase.table(table_name).insert(batch).execute()
+        total_inserted += len(batch)
+        
+    action = "créée et remplie" if mode == 'create' else "mise à jour"
+    return f"✅ Table Excel '{table_name}' {action} ({total_inserted} lignes)."
+
 
 @app.route('/')
 def index():
@@ -230,10 +291,10 @@ def filter_columns():
             raise ValueError("Sep not ;")
     except Exception:
         try:
-             # Essai 2: Séparateur ',' (standard)
+            # Essai 2: Séparateur ',' (standard)
             df = pd.read_csv(input_path, sep=',', on_bad_lines='skip', encoding='utf-8', engine='python')
         except Exception:
-             # Fallback: Encoding latin1 + séparateur ';'
+            # Fallback: Encoding latin1 + séparateur ';'
             df = pd.read_csv(input_path, sep=';', on_bad_lines='skip', encoding='latin1', engine='python')
 
     # Transformation pré-sélection (pour matcher ce qu'on a envoyé au front lors de l'upload)

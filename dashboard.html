@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RMS Dashboard | Pro Analytics</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f172a;
+            --surface: rgba(30, 41, 59, 0.7);
+            --primary: #38bdf8;
+            --secondary: #818cf8;
+            --accent: #f472b6;
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --success: #4ade80;
+            --glass: rgba(255, 255, 255, 0.03);
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+            background-image:
+                radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(129, 140, 248, 0.15) 0px, transparent 50%);
+        }
+
+        /* Login Screen */
+        #login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-card {
+            background: var(--surface);
+            padding: 40px;
+            border-radius: 24px;
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            width: 100%;
+            max-width: 450px;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .login-card h1 {
+            font-size: 2rem;
+            margin-bottom: 30px;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+
+        .input-group {
+            text-align: left;
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            margin-bottom: 8px;
+            margin-left: 5px;
+        }
+
+        input {
+            width: 100%;
+            background: var(--glass);
+            border: 1px solid var(--border);
+            padding: 14px 18px;
+            border-radius: 12px;
+            color: white;
+            font-family: inherit;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.2s;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        /* Dashboard Layout */
+        .dashboard {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            min-height: 100vh;
+            display: none;
+        }
+
+        /* Sidebar */
+        aside {
+            background: rgba(15, 23, 42, 0.8);
+            border-right: 1px solid var(--border);
+            padding: 30px 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 40px;
+            letter-spacing: -1px;
+        }
+
+        .nav-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .table-list {
+            list-style: none;
+            overflow-y: auto;
+            max-height: calc(100vh - 200px);
+        }
+
+        .table-item {
+            padding: 12px 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-bottom: 5px;
+            color: var(--text-dim);
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            border: 1px solid transparent;
+        }
+
+        .table-item:hover {
+            background: var(--glass);
+            color: white;
+        }
+
+        .table-item.active {
+            background: var(--glass);
+            color: var(--primary);
+            border-color: rgba(56, 189, 248, 0.3);
+        }
+
+        /* Main Content */
+        main {
+            padding: 40px;
+            overflow-y: auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .header h2 {
+            font-size: 1.8rem;
+        }
+
+        /* KPI Cards */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .kpi-card {
+            background: var(--surface);
+            padding: 25px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            backdrop-filter: blur(10px);
+        }
+
+        .kpi-title {
+            color: var(--text-dim);
+            font-size: 0.85rem;
+            margin-bottom: 10px;
+        }
+
+        .kpi-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .kpi-trend {
+            font-size: 0.8rem;
+            color: var(--success);
+        }
+
+        /* Charts Section */
+        .chart-section {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .chart-card {
+            background: var(--surface);
+            padding: 30px;
+            border-radius: 24px;
+            border: 1px solid var(--border);
+            height: 400px;
+        }
+
+        .chart-card h3 {
+            margin-bottom: 20px;
+            font-weight: 600;
+            color: var(--text-dim);
+        }
+
+        /* Table Section */
+        .data-card {
+            background: var(--surface);
+            border-radius: 24px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .data-header {
+            padding: 20px 30px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            padding: 15px 30px;
+            background: rgba(0, 0, 0, 0.2);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            border-bottom: 1px solid var(--border);
+        }
+
+        td {
+            padding: 12px 30px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.9rem;
+        }
+
+        tr:hover {
+            background: var(--glass);
+        }
+
+        /* Loading */
+        .loader {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: var(--border);
+            overflow: hidden;
+            z-index: 2000;
+        }
+
+        .loader-bar {
+            width: 40%;
+            height: 100%;
+            background: var(--primary);
+            animation: loading 1.5s infinite ease-in-out;
+        }
+
+        @keyframes loading {
+            0% {
+                transform: translateX(-100%);
+            }
+
+            100% {
+                transform: translateX(250%);
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="loader" class="loader">
+        <div class="loader-bar"></div>
+    </div>
+
+    <!-- Login -->
+    <div id="login-overlay">
+        <div class="login-card">
+            <h1>Dash RMS v1.0</h1>
+            <p style="color:var(--text-dim); margin-bottom: 30px;">Connectez-vous à votre instance Supabase</p>
+
+            <div class="input-group">
+                <label>SUPABASE URL</label>
+                <input type="text" id="sb-url" placeholder="https://..." value="https://supabase.e-hotelmanager.com">
+            </div>
+            <div class="input-group" style="margin-bottom: 30px;">
+                <label>SERVICE ROLE KEY</label>
+                <input type="password" id="sb-key" placeholder="eyJhbGci..." value="">
+            </div>
+
+            <button class="btn" onclick="connect()">Initialiser le Dashboard</button>
+            <p id="login-error" style="color:var(--accent); font-size:0.8rem; margin-top:15px; display:none;"></p>
+        </div>
+    </div>
+
+    <!-- Layout -->
+    <div class="dashboard" id="main-layout">
+        <aside>
+            <div class="logo">RMS Pro</div>
+
+            <span class="nav-label">Sources de données</span>
+            <ul class="table-list" id="table-list">
+                <!-- Dynamically filled -->
+            </ul>
+        </aside>
+
+        <main>
+            <div class="header">
+                <div>
+                    <h2 id="current-table-name">Sélectionnez une table</h2>
+                    <p style="color:var(--text-dim); font-size:0.9rem;">Vue d'ensemble de vos indicateurs</p>
+                </div>
+                <div style="display: flex; gap:10px;">
+                    <button class="btn secondary"
+                        style="width: auto; padding: 10px 20px; background:var(--glass); border: 1px solid var(--border);"
+                        onclick="refreshData()">Rafraîchir</button>
+                </div>
+            </div>
+
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-title">Lignes Total</div>
+                    <div class="kpi-value" id="kpi-rows">0</div>
+                    <div class="kpi-trend">Live Sync</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-title">Moyenne Valeur</div>
+                    <div class="kpi-value" id="kpi-avg">0</div>
+                    <div class="kpi-trend">Calcul auto</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-title">Colonnes</div>
+                    <div class="kpi-value" id="kpi-cols">0</div>
+                    <div class="kpi-trend">Schema</div>
+                </div>
+                <div class="kpi-card"
+                    style="background: linear-gradient(135deg, rgba(56, 189, 248, 0.1), transparent);">
+                    <div class="kpi-title">Status</div>
+                    <div class="kpi-value" style="color:var(--success); font-size:1.2rem; margin-top:5px;">Connecté
+                    </div>
+                    <div class="kpi-trend">Supabase API</div>
+                </div>
+            </div>
+
+            <div class="chart-section">
+                <div class="chart-card">
+                    <h3>Évolution des données</h3>
+                    <canvas id="mainChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Exploration Temporelle</h3>
+                    <div
+                        style="height: 100%; display: flex; align-items: center; justify-content: center; color: var(--text-dim); font-size: 0.8rem; text-align: center;">
+                        Génération automatique basée sur les colonnes de type 'date' détectées.
+                    </div>
+                </div>
+            </div>
+
+            <div class="data-card">
+                <div class="data-header">
+                    <h3>Données Brutes</h3>
+                    <input type="text" id="table-search" placeholder="Rechercher..."
+                        style="width: 200px; padding: 8px 15px; font-size: 0.8rem;">
+                </div>
+                <div class="table-wrapper">
+                    <table id="raw-table">
+                        <thead>
+                            <tr id="table-head"></tr>
+                        </thead>
+                        <tbody id="table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let sbClient = null;
+        let mainChart = null;
+        let currentData = [];
+        let state = {
+            table: null,
+            schema: {}
+        };
+
+        async function connect() {
+            const url = document.getElementById('sb-url').value;
+            const key = document.getElementById('sb-key').value;
+            const errorEl = document.getElementById('login-error');
+
+            if (!url || !key) {
+                errorEl.innerText = "URL and Key are required";
+                errorEl.style.display = "block";
+                return;
+            }
+
+            try {
+                showLoader(true);
+                sbClient = supabase.createClient(url, key);
+
+                // Test connection by fetching tables (via RPC if exists or just schema check)
+                // Since we might not have 'exec_sql' exposed for public, we'll try a common pattern
+                // In a true standalone JS, we usually rely on public schemas or specific RPCs
+                const { data, error } = await sbClient.rpc('get_tables'); // Try our helper RPC
+
+                if (error) {
+                    // Fallback: Just try to list something common or alert
+                    console.error("RPC get_tables failed, attempting direct table check...");
+                    // If no RPC, user might need to create it. For now, we list tables manually meta
+                    const { data: listData, error: listError } = await sbClient.from('reservations').select('*', { count: 'exact', head: true });
+                    if (listError && listError.code !== 'PGRST116') throw listError;
+                }
+
+                document.getElementById('login-overlay').style.display = 'none';
+                document.getElementById('main-layout').style.display = 'grid';
+
+                initDashboard();
+            } catch (e) {
+                errorEl.innerText = "Connection failed: " + e.message;
+                errorEl.style.display = "block";
+            } finally {
+                showLoader(false);
+            }
+        }
+
+        async function initDashboard() {
+            // Fill table list 
+            // NOTE: In production, you'd use a meta-query or the RPC we setup earlier
+            // For now, we manually fetch from our 'exec_sql' or similar if available
+            try {
+                const { data, error } = await sbClient.rpc('exec_sql', { query: "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE';" });
+                if (data) renderTableList(data);
+            } catch (e) {
+                console.warn("Could not fetch table list automatically.");
+            }
+        }
+
+        function renderTableList(tables) {
+            const list = document.getElementById('table-list');
+            list.innerHTML = '';
+            tables.forEach(t => {
+                const name = t.table_name;
+                const li = document.createElement('li');
+                li.className = 'table-item';
+                li.innerHTML = `<span>📊</span> ${name}`;
+                li.onclick = () => loadTableData(name, li);
+                list.appendChild(li);
+            });
+        }
+
+        async function loadTableData(tableName, el) {
+            document.querySelectorAll('.table-item').forEach(i => i.classList.remove('active'));
+            if (el) el.classList.add('active');
+
+            state.table = tableName;
+            document.getElementById('current-table-name').innerText = tableName;
+
+            showLoader(true);
+            try {
+                const { data, error } = await sbClient.from(tableName).select('*').limit(500);
+                if (error) throw error;
+
+                currentData = data;
+                processAndRender(data);
+            } catch (e) {
+                alert("Error loading data: " + e.message);
+            } finally {
+                showLoader(false);
+            }
+        }
+
+        function processAndRender(data) {
+            if (!data || data.length === 0) return;
+
+            const cols = Object.keys(data[0]);
+
+            // KPIs
+            document.getElementById('kpi-rows').innerText = data.length;
+            document.getElementById('kpi-cols').innerText = cols.length;
+
+            // Try to find a numeric column for average
+            let numericCol = cols.find(c => ['valeur', 'prix', 'revenue', 'occupancy', 'rate'].some(p => c.toLowerCase().includes(p)));
+            if (numericCol) {
+                const avg = data.reduce((acc, curr) => acc + (parseFloat(curr[numericCol]) || 0), 0) / data.length;
+                document.getElementById('kpi-avg').innerText = avg.toFixed(2);
+            }
+
+            // Render Table
+            const head = document.getElementById('table-head');
+            const body = document.getElementById('table-body');
+            head.innerHTML = cols.map(c => `<th>${c}</th>`).join('');
+            body.innerHTML = data.slice(0, 50).map(row => {
+                return `<tr>${cols.map(c => `<td>${row[c] !== null ? row[c] : '-'}</td>`).join('')}</tr>`;
+            }).join('');
+
+            // Render Chart
+            renderChart(data, cols);
+        }
+
+        function renderChart(data, cols) {
+            const ctx = document.getElementById('mainChart').getContext('2d');
+
+            // Detect Date and Value columns
+            const dateCol = cols.find(c => ['date', 'jour', 'debut', 'fin', 'timestamp'].some(p => c.toLowerCase().includes(p)));
+            const valCol = cols.find(c => ['valeur', 'prix', 'revenue', 'rate', 'price', 'total'].some(p => c.toLowerCase().includes(p)));
+
+            if (mainChart) mainChart.destroy();
+
+            if (!dateCol || !valCol) {
+                // Background message or placeholder
+                return;
+            }
+
+            // Sort data by date
+            const sorted = [...data].sort((a, b) => new Date(a[dateCol]) - new Date(b[dateCol]));
+            const labels = sorted.map(d => d[dateCol]);
+            const values = sorted.map(d => parseFloat(d[valCol]) || 0);
+
+            mainChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: valCol,
+                        data: values,
+                        borderColor: '#38bdf8',
+                        backgroundColor: 'rgba(56, 189, 248, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 3,
+                        pointRadius: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8', maxRotation: 45, minRotation: 45 } }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        function showLoader(show) {
+            document.getElementById('loader').style.display = show ? 'block' : 'none';
+        }
+
+        function refreshData() {
+            if (state.table) loadTableData(state.table);
+        }
+
+    </script>
+</body>
+
+</html>

@@ -461,9 +461,10 @@
             const url = document.getElementById('sb-url').value;
             const key = document.getElementById('sb-key').value;
             const errorEl = document.getElementById('login-error');
+            errorEl.style.display = "none";
 
             if (!url || !key) {
-                errorEl.innerText = "URL and Key are required";
+                errorEl.innerText = "URL et Clé REQUISES";
                 errorEl.style.display = "block";
                 return;
             }
@@ -472,19 +473,25 @@
                 showLoader(true);
                 sbClient = supabase.createClient(url, key);
 
-                // Test connection and Fetch Tables using exec_sql (which we use in backend)
+                // Test connection and Fetch Tables using exec_sql
+                console.log("Tentative de connexion à:", url);
                 const { data, error } = await sbClient.rpc('exec_sql', {
                     query: "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE' ORDER BY table_name;"
                 });
 
-                if (error) throw new Error("Impossible de lister les tables : " + error.message);
+                if (error) {
+                    if (error.message.includes("401")) throw new Error("Erreur 401: Clé invalide ou accès refusé. Vérifiez votre Clé Service Role.");
+                    if (error.message.includes("404")) throw new Error("Erreur 404: Fonction 'exec_sql' non trouvée. Lancez setup_rpc.py.");
+                    throw error;
+                }
 
                 document.getElementById('login-overlay').style.display = 'none';
                 document.getElementById('main-layout').style.display = 'grid';
 
                 renderTableList(data || []);
             } catch (e) {
-                errorEl.innerText = "Connection failed: " + e.message;
+                console.error("DEBUG Connection Error:", e);
+                errorEl.innerHTML = `⚠️ <b>Erreur :</b> ${e.message}<br><br><small>Note: Assurez-vous d'ouvrir le fichier situé dans <b>RMS-YIELD-2026/dashboard.html</b> et non une version téléchargée.</small>`;
                 errorEl.style.display = "block";
             } finally {
                 showLoader(false);

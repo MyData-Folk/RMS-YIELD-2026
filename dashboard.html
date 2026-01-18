@@ -4,10 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RMS Dashboard | Pro Analytics</title>
+    <title>RMS Dashboard | Pro v2.0</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg: #0f172a;
@@ -20,6 +20,7 @@
             --success: #4ade80;
             --glass: rgba(255, 255, 255, 0.03);
             --border: rgba(255, 255, 255, 0.1);
+            --nav-height: 70px;
         }
 
         * {
@@ -33,10 +34,66 @@
             background: var(--bg);
             color: var(--text);
             min-height: 100vh;
-            overflow-x: hidden;
             background-image:
-                radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.15) 0px, transparent 50%),
-                radial-gradient(at 100% 100%, rgba(129, 140, 248, 0.15) 0px, transparent 50%);
+                radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.1) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(129, 140, 248, 0.1) 0px, transparent 50%);
+            background-attachment: fixed;
+            overflow-x: hidden;
+        }
+
+        /* Navbar Horizontale */
+        nav {
+            height: var(--nav-height);
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(15px);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--primary);
+            letter-spacing: -1px;
+        }
+
+        .nav-controls {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        select.table-select {
+            background: var(--glass);
+            border: 1px solid var(--border);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 10px;
+            font-family: inherit;
+            outline: none;
+            cursor: pointer;
+            min-width: 200px;
+            transition: 0.3s;
+        }
+
+        select.table-select:hover {
+            border-color: var(--primary);
+        }
+
+        select.table-select option {
+            background: var(--bg);
         }
 
         /* Login Screen */
@@ -55,18 +112,18 @@
 
         .login-card {
             background: var(--surface);
-            padding: 40px;
-            border-radius: 24px;
+            padding: 50px;
+            border-radius: 32px;
             backdrop-filter: blur(20px);
             border: 1px solid var(--border);
             width: 100%;
-            max-width: 450px;
+            max-width: 500px;
             text-align: center;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
 
         .login-card h1 {
-            font-size: 2rem;
+            font-size: 2.2rem;
             margin-bottom: 30px;
             background: linear-gradient(to right, var(--primary), var(--secondary));
             -webkit-background-clip: text;
@@ -83,7 +140,6 @@
             font-size: 0.8rem;
             color: var(--text-dim);
             margin-bottom: 8px;
-            margin-left: 5px;
         }
 
         input {
@@ -95,7 +151,7 @@
             color: white;
             font-family: inherit;
             outline: none;
-            transition: all 0.3s;
+            transition: 0.3s;
         }
 
         input:focus {
@@ -104,105 +160,52 @@
         }
 
         .btn {
-            width: 100%;
-            padding: 14px;
+            padding: 12px 24px;
             border: none;
             border-radius: 12px;
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             color: white;
             font-weight: 600;
             cursor: pointer;
-            transition: transform 0.2s, opacity 0.2s;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
 
         .btn:hover {
             opacity: 0.9;
-            transform: translateY(-2px);
+            transform: translateY(-1px);
         }
 
-        .btn:active {
-            transform: translateY(0);
-        }
-
-        /* Dashboard Layout */
-        .dashboard {
-            display: grid;
-            grid-template-columns: 280px 1fr;
-            min-height: 100vh;
-            display: none;
-        }
-
-        /* Sidebar */
-        aside {
-            background: rgba(15, 23, 42, 0.8);
-            border-right: 1px solid var(--border);
-            padding: 30px 20px;
-            backdrop-filter: blur(10px);
-        }
-
-        .logo {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--primary);
-            margin-bottom: 40px;
-            letter-spacing: -1px;
-        }
-
-        .nav-label {
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            color: var(--text-dim);
-            letter-spacing: 1px;
-            margin-bottom: 15px;
-            display: block;
-        }
-
-        .table-list {
-            list-style: none;
-            overflow-y: auto;
-            max-height: calc(100vh - 200px);
-        }
-
-        .table-item {
-            padding: 12px 15px;
-            border-radius: 10px;
-            cursor: pointer;
-            margin-bottom: 5px;
-            color: var(--text-dim);
-            transition: 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 0.9rem;
-            border: 1px solid transparent;
-        }
-
-        .table-item:hover {
+        .btn.secondary {
             background: var(--glass);
-            color: white;
-        }
-
-        .table-item.active {
-            background: var(--glass);
-            color: var(--primary);
-            border-color: rgba(56, 189, 248, 0.3);
+            border: 1px solid var(--border);
         }
 
         /* Main Content */
-        main {
-            padding: 40px;
-            overflow-y: auto;
+        #main-layout {
+            display: none;
         }
 
-        .header {
+        main {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 40px;
+        }
+
+        .page-header {
+            margin-bottom: 40px;
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
+            align-items: flex-end;
         }
 
-        .header h2 {
-            font-size: 1.8rem;
+        .page-header h2 {
+            font-size: 2.2rem;
+            margin-bottom: 5px;
+            font-weight: 700;
         }
 
         /* KPI Cards */
@@ -215,31 +218,26 @@
 
         .kpi-card {
             background: var(--surface);
-            padding: 25px;
-            border-radius: 20px;
+            padding: 30px;
+            border-radius: 24px;
             border: 1px solid var(--border);
             backdrop-filter: blur(10px);
         }
 
         .kpi-title {
             color: var(--text-dim);
-            font-size: 0.85rem;
-            margin-bottom: 10px;
+            font-size: 0.9rem;
+            margin-bottom: 12px;
+            font-weight: 500;
         }
 
         .kpi-value {
-            font-size: 1.8rem;
+            font-size: 2.2rem;
             font-weight: 700;
-            margin-bottom: 5px;
         }
 
-        .kpi-trend {
-            font-size: 0.8rem;
-            color: var(--success);
-        }
-
-        /* Charts Section */
-        .chart-section {
+        /* Charts */
+        .chart-row {
             display: grid;
             grid-template-columns: 2fr 1fr;
             gap: 25px;
@@ -248,81 +246,198 @@
 
         .chart-card {
             background: var(--surface);
-            padding: 30px;
-            border-radius: 24px;
+            padding: 35px;
+            border-radius: 28px;
             border: 1px solid var(--border);
-            height: 400px;
+            height: 480px;
+            position: relative;
         }
 
         .chart-card h3 {
-            margin-bottom: 20px;
-            font-weight: 600;
+            margin-bottom: 30px;
             color: var(--text-dim);
+            font-weight: 600;
+            font-size: 1.1rem;
         }
 
-        /* Table Section */
+        /* Data Table */
         .data-card {
             background: var(--surface);
-            border-radius: 24px;
+            border-radius: 28px;
             border: 1px solid var(--border);
+            margin-top: 40px;
             overflow: hidden;
         }
 
         .data-header {
-            padding: 20px 30px;
+            padding: 25px 35px;
             border-bottom: 1px solid var(--border);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            background: rgba(0, 0, 0, 0.1);
         }
 
         .table-wrapper {
             overflow-x: auto;
+            max-height: 700px;
+            overflow-y: auto;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            text-align: left;
+            white-space: nowrap;
         }
 
         th {
-            padding: 15px 30px;
-            background: rgba(0, 0, 0, 0.2);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            padding: 20px 35px;
+            background: #1e293b;
             font-size: 0.8rem;
             text-transform: uppercase;
             color: var(--text-dim);
             border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            user-select: none;
+            transition: 0.2s;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        th:hover {
+            background: rgba(56, 189, 248, 0.1);
+            color: var(--primary);
+        }
+
+        th.sort-asc::after {
+            content: ' ↑';
+            color: var(--primary);
+        }
+
+        th.sort-desc::after {
+            content: ' ↓';
+            color: var(--primary);
         }
 
         td {
-            padding: 12px 30px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            font-size: 0.9rem;
+            padding: 16px 35px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            font-size: 0.95rem;
+            color: #e2e8f0;
         }
 
         tr:hover {
-            background: var(--glass);
+            background: rgba(56, 189, 248, 0.04);
         }
 
-        /* Loading */
+        /* Modal Settings */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: #1e293b;
+            border: 1px solid var(--border);
+            border-radius: 32px;
+            width: 90%;
+            max-width: 650px;
+            padding: 45px;
+            color: white;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 35px;
+        }
+
+        .col-list {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .col-item {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 15px 20px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            margin-bottom: 12px;
+            transition: 0.2s;
+        }
+
+        .col-item:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: var(--primary);
+        }
+
+        .col-item input[type="text"] {
+            background: transparent;
+            border: none;
+            padding: 5px;
+            width: 220px;
+            font-size: 1rem;
+            color: white;
+            font-weight: 500;
+        }
+
+        .col-item input[type="text"]:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        .col-btn {
+            background: none;
+            border: none;
+            color: var(--text-dim);
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .col-btn:hover {
+            color: white;
+        }
+
+        /* Utils */
         .loader {
             display: none;
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
-            height: 4px;
-            background: var(--border);
-            overflow: hidden;
+            height: 5px;
+            background: rgba(56, 189, 248, 0.1);
             z-index: 2000;
+            overflow: hidden;
         }
 
         .loader-bar {
-            width: 40%;
+            width: 50%;
             height: 100%;
             background: var(--primary);
-            animation: loading 1.5s infinite ease-in-out;
+            animation: loading 1.5s infinite;
         }
 
         @keyframes loading {
@@ -331,12 +446,26 @@
             }
 
             100% {
-                transform: translateX(250%);
+                transform: translateX(200%);
             }
         }
 
-        .hidden {
-            display: none !important;
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-dim);
         }
     </style>
 </head>
@@ -347,100 +476,104 @@
         <div class="loader-bar"></div>
     </div>
 
-    <!-- Login -->
+    <!-- Login Screen -->
     <div id="login-overlay">
         <div class="login-card">
-            <h1>Dash RMS v1.0</h1>
-            <p style="color:var(--text-dim); margin-bottom: 30px;">Connectez-vous à votre instance Supabase</p>
-
+            <h1>Dash RMS v2.0</h1>
+            <p style="color:var(--text-dim); margin-bottom: 40px;">Nouvelle interface analytique autonome</p>
             <div class="input-group">
-                <label>SUPABASE URL</label>
+                <label>INSTANCE URL</label>
                 <input type="text" id="sb-url" placeholder="https://..." value="https://supabase.e-hotelmanager.com">
             </div>
-            <div class="input-group" style="margin-bottom: 30px;">
+            <div class="input-group" style="margin-bottom: 40px;">
                 <label>SERVICE ROLE KEY</label>
                 <input type="password" id="sb-key" placeholder="eyJhbGci..." value="">
             </div>
-
-            <button class="btn" onclick="connect()">Initialiser le Dashboard</button>
-            <p id="login-error" style="color:var(--accent); font-size:0.8rem; margin-top:15px; display:none;"></p>
+            <button class="btn" style="width:100%; font-size:1.1rem; padding:16px;" onclick="connect()">Initialiser le
+                Dashboard</button>
+            <p id="login-error" style="color:var(--accent); font-size:0.9rem; margin-top:20px; display:none;"></p>
         </div>
     </div>
 
-    <!-- Layout -->
-    <div class="dashboard" id="main-layout">
-        <aside>
-            <div class="logo">RMS Pro</div>
-
-            <span class="nav-label">Sources de données</span>
-            <ul class="table-list" id="table-list">
-                <!-- Dynamically filled -->
-            </ul>
-        </aside>
+    <!-- Dashboard Container -->
+    <div id="main-layout">
+        <nav>
+            <div class="logo-area">
+                <div class="logo">RMS Pro <span>Analytics</span></div>
+            </div>
+            <div class="nav-controls">
+                <select id="table-select" class="table-select" onchange="loadTableData(this.value)">
+                    <option value="" disabled selected>Choisir une table...</option>
+                </select>
+                <button class="btn secondary" onclick="openSettings()">⚙️ Colonnes</button>
+                <button class="btn" onclick="refreshData()">🔄 Actualiser</button>
+            </div>
+        </nav>
 
         <main>
-            <div class="header">
+            <div class="page-header">
                 <div>
-                    <h2 id="current-table-name">Sélectionnez une table</h2>
-                    <p style="color:var(--text-dim); font-size:0.9rem;">Vue d'ensemble de vos indicateurs</p>
+                    <h2 id="current-title">Tableau de bord</h2>
+                    <p style="color:var(--text-dim)">Visualisation dynamique des indicateurs clés</p>
                 </div>
-                <div style="display: flex; gap:10px;">
-                    <button class="btn secondary"
-                        style="width: auto; padding: 10px 20px; background:var(--glass); border: 1px solid var(--border);"
-                        onclick="refreshData()">Rafraîchir</button>
+                <div id="sync-status"
+                    style="font-size: 0.85rem; color: var(--success); display: flex; align-items: center; gap: 8px; background: rgba(74, 222, 128, 0.1); padding: 8px 16px; border-radius: 20px; border: 1px solid rgba(74, 222, 128, 0.2);">
+                    <span
+                        style="width:10px; height:10px; border-radius:50%; background:currentColor; box-shadow: 0 0 10px currentColor;"></span>
+                    Live Sync Connected
                 </div>
             </div>
 
+            <!-- KPI Row -->
             <div class="kpi-grid">
                 <div class="kpi-card">
                     <div class="kpi-title">Lignes Total</div>
                     <div class="kpi-value" id="kpi-rows">0</div>
-                    <div class="kpi-trend">Live Sync</div>
                 </div>
                 <div class="kpi-card">
-                    <div class="kpi-title">Moyenne Valeur</div>
-                    <div class="kpi-value" id="kpi-avg">0</div>
-                    <div class="kpi-trend">Calcul auto</div>
+                    <div class="kpi-title">Moyenne Revenue</div>
+                    <div class="kpi-value" id="kpi-avg">0€</div>
                 </div>
                 <div class="kpi-card">
-                    <div class="kpi-title">Colonnes</div>
+                    <div class="kpi-title">Colonnes Actives</div>
                     <div class="kpi-value" id="kpi-cols">0</div>
-                    <div class="kpi-trend">Schema</div>
                 </div>
                 <div class="kpi-card"
-                    style="background: linear-gradient(135deg, rgba(56, 189, 248, 0.1), transparent);">
-                    <div class="kpi-title">Status</div>
-                    <div class="kpi-value" style="color:var(--success); font-size:1.2rem; margin-top:5px;">Connecté
-                    </div>
-                    <div class="kpi-trend">Supabase API</div>
+                    style="background: linear-gradient(135deg, rgba(56,189,248,0.1), transparent); border-color: var(--primary);">
+                    <div class="kpi-title">Indicateur Focus</div>
+                    <div class="kpi-value" id="kpi-focus"
+                        style="color: var(--primary); font-size:1.6rem; margin-top:5px;">N/A</div>
                 </div>
             </div>
 
-            <div class="chart-section">
+            <!-- Visuals Row -->
+            <div class="chart-row">
                 <div class="chart-card">
-                    <h3>Évolution des données</h3>
+                    <h3>Évolution des Performances</h3>
                     <canvas id="mainChart"></canvas>
                 </div>
-                <div class="chart-card">
-                    <h3>Exploration Temporelle</h3>
+                <div class="chart-card" id="extra-viz">
+                    <h3>Distribution des Données</h3>
                     <div
-                        style="height: 100%; display: flex; align-items: center; justify-content: center; color: var(--text-dim); font-size: 0.8rem; text-align: center;">
-                        Génération automatique basée sur les colonnes de type 'date' détectées.
+                        style="height: 100%; display: flex; align-items: center; justify-content: center; color: var(--text-dim); text-align: center; font-size: 0.9rem; padding: 40px;">
+                        Glissez et triez les colonnes dans la table pour mettre à jour la perspective visuelle.
                     </div>
                 </div>
             </div>
 
+            <!-- Data Table Section -->
             <div class="data-card">
                 <div class="data-header">
-                    <h3>Données Brutes</h3>
-                    <input type="text" id="table-search" placeholder="Rechercher..."
-                        style="width: 200px; padding: 8px 15px; font-size: 0.8rem;">
+                    <h3 id="table-label">Flux de données</h3>
+                    <div style="display:flex; gap:15px; align-items:center;">
+                        <span style="font-size:0.8rem; color:var(--text-dim)">Rechercher:</span>
+                        <input type="text" id="table-search" oninput="filterTable()" placeholder="..."
+                            style="width: 280px; padding: 12px 20px; border-radius:20px;">
+                    </div>
                 </div>
                 <div class="table-wrapper">
                     <table id="raw-table">
-                        <thead>
-                            <tr id="table-head"></tr>
-                        </thead>
+                        <thead id="table-head"></thead>
                         <tbody id="table-body"></tbody>
                     </table>
                 </div>
@@ -448,24 +581,48 @@
         </main>
     </div>
 
+    <!-- Management Modal -->
+    <div id="modal-settings" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 style="font-size:1.6rem;">Configuration de la Vue</h2>
+                <button class="col-btn" onclick="closeSettings()" style="font-size: 2rem;">&times;</button>
+            </div>
+
+            <div class="col-list" id="col-list-config">
+                <!-- Javascript will populate this -->
+            </div>
+
+            <div style="margin-top: 35px; display: flex; justify-content: flex-end; gap: 20px;">
+                <button class="btn secondary" style="background:transparent;" onclick="closeSettings()">Fermer</button>
+                <button class="btn" style="min-width: 180px;" onclick="applySettings()">Appliquer & Sauver</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let sbClient = null;
         let mainChart = null;
-        let currentData = [];
-        let state = {
-            table: null,
-            schema: {}
+        let rawData = [];
+        let displayData = [];
+        let currentTableName = "";
+
+        let config = {
+            columns: [], // { original, label, hidden, order }
+            sortBy: null,
+            sortDesc: false
         };
 
+        // Initialize Supabase
         async function connect() {
             const url = document.getElementById('sb-url').value;
             const key = document.getElementById('sb-key').value;
             const errorEl = document.getElementById('login-error');
-            errorEl.style.display = "none";
+            errorEl.style.display = 'none';
 
             if (!url || !key) {
-                errorEl.innerText = "URL et Clé REQUISES";
-                errorEl.style.display = "block";
+                errorEl.innerText = "URL et Clé requises";
+                errorEl.style.display = 'block';
                 return;
             }
 
@@ -473,166 +630,256 @@
                 showLoader(true);
                 sbClient = supabase.createClient(url, key);
 
-                console.log("--- Supabase Discovery Start ---");
-
-                // Method 1: Try get_public_tables (RPC from setup_rpc.py)
+                // Fetch tables using multiple methods
                 let { data: tables, error } = await sbClient.rpc('get_public_tables');
-
                 if (error || !tables || tables.length === 0) {
-                    console.log("Method 1 (get_public_tables) failed or empty, trying Method 2 (exec_sql)...");
-
-                    // Method 2: Fallback to exec_sql with pg_tables
                     const res2 = await sbClient.rpc('exec_sql', {
                         query: "SELECT tablename as table_name FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename;"
                     });
-
-                    if (res2.error) {
-                        console.error("Method 2 failed:", res2.error);
-                        throw new Error("Impossible de lister les tables : " + res2.error.message);
-                    }
+                    if (res2.error) throw res2.error;
                     tables = res2.data;
                 }
 
-                console.log("Tables found:", tables);
-
+                populateTableSelect(tables);
                 document.getElementById('login-overlay').style.display = 'none';
-                document.getElementById('main-layout').style.display = 'grid';
+                document.getElementById('main-layout').style.display = 'block';
 
-                renderTableList(tables || []);
             } catch (e) {
-                console.error("DEBUG Connection Error:", e);
-                errorEl.innerHTML = `⚠️ <b>Erreur :</b> ${e.message}<br><br><small>Vérifiez que vous utilisez bien la <b>Service Role Key</b> et que vous avez lancé le script <b>setup_rpc.py</b> une fois.</small>`;
-                errorEl.style.display = "block";
+                errorEl.innerText = "⚠️ Échec de connexion : " + e.message;
+                errorEl.style.display = 'block';
             } finally {
                 showLoader(false);
             }
         }
 
-        // initDashboard is no longer needed as table listing is handled directly in connect()
-        // async function initDashboard() {
-        //     // Fill table list 
-        //     // NOTE: In production, you'd use a meta-query or the RPC we setup earlier
-        //     // For now, we manually fetch from our 'exec_sql' or similar if available
-        //     try {
-        //         const { data, error } = await sbClient.rpc('exec_sql', { query: "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE';" });
-        //         if (data) renderTableList(data);
-        //     } catch (e) {
-        //         console.warn("Could not fetch table list automatically.");
-        //     }
-        // }
-
-        function renderTableList(tables) {
-            const list = document.getElementById('table-list');
-            list.innerHTML = '';
-            if (tables.length === 0) {
-                list.innerHTML = '<li class="table-item" style="font-size:0.8rem; color:var(--accent);">Aucune table trouvée</li>';
-                return;
-            }
+        function populateTableSelect(tables) {
+            const select = document.getElementById('table-select');
             tables.forEach(t => {
-                const name = t.table_name;
-                const li = document.createElement('li');
-                li.className = 'table-item';
-                li.innerHTML = `<span>📊</span> ${name}`;
-                li.onclick = () => loadTableData(name, li);
-                list.appendChild(li);
+                const opt = document.createElement('option');
+                opt.value = t.table_name;
+                opt.innerText = t.table_name;
+                select.appendChild(opt);
             });
         }
 
-        async function loadTableData(tableName, el) {
-            document.querySelectorAll('.table-item').forEach(i => i.classList.remove('active'));
-            if (el) el.classList.add('active');
-
-            state.table = tableName;
-            document.getElementById('current-table-name').innerText = tableName;
+        async function loadTableData(tableName) {
+            currentTableName = tableName;
+            document.getElementById('current-title').innerText = tableName;
+            document.getElementById('table-label').innerText = "Données : " + tableName;
 
             showLoader(true);
             try {
-                const { data, error } = await sbClient.from(tableName).select('*').limit(500);
+                const { data, error } = await sbClient.from(tableName).select('*').limit(800);
                 if (error) throw error;
 
-                currentData = data;
-                processAndRender(data);
+                rawData = data;
+                displayData = [...data];
+
+                // Initialize column config
+                const cols = Object.keys(data[0] || {});
+                config.columns = cols.map((c, i) => ({
+                    original: c,
+                    label: c,
+                    hidden: false,
+                    order: i
+                }));
+
+                renderDashboard();
             } catch (e) {
-                alert("Error loading data: " + e.message);
+                alert("Impossible de charger les données : " + e.message);
             } finally {
                 showLoader(false);
             }
         }
 
-        function processAndRender(data) {
-            if (!data || data.length === 0) return;
-
-            const cols = Object.keys(data[0]);
-
-            // KPIs
-            document.getElementById('kpi-rows').innerText = data.length;
-            document.getElementById('kpi-cols').innerText = cols.length;
-
-            // Try to find a numeric column for average
-            let numericCol = cols.find(c => ['valeur', 'prix', 'revenue', 'occupancy', 'rate'].some(p => c.toLowerCase().includes(p)));
-            if (numericCol) {
-                const avg = data.reduce((acc, curr) => acc + (parseFloat(curr[numericCol]) || 0), 0) / data.length;
-                document.getElementById('kpi-avg').innerText = avg.toFixed(2);
-            }
-
-            // Render Table
-            const head = document.getElementById('table-head');
-            const body = document.getElementById('table-body');
-            head.innerHTML = cols.map(c => `<th>${c}</th>`).join('');
-            body.innerHTML = data.slice(0, 50).map(row => {
-                return `<tr>${cols.map(c => `<td>${row[c] !== null ? row[c] : '-'}</td>`).join('')}</tr>`;
-            }).join('');
-
-            // Render Chart
-            renderChart(data, cols);
+        function renderDashboard() {
+            updateKPIs();
+            renderTable();
+            renderChart();
         }
 
-        function renderChart(data, cols) {
-            const ctx = document.getElementById('mainChart').getContext('2d');
+        function updateKPIs() {
+            document.getElementById('kpi-rows').innerText = displayData.length;
+            const activeCols = config.columns.filter(c => !c.hidden);
+            document.getElementById('kpi-cols').innerText = activeCols.length;
 
-            // Detect Date and Value columns
-            const dateCol = cols.find(c => ['date', 'jour', 'debut', 'fin', 'timestamp'].some(p => c.toLowerCase().includes(p)));
-            const valCol = cols.find(c => ['valeur', 'prix', 'revenue', 'rate', 'price', 'total'].some(p => c.toLowerCase().includes(p)));
+            // Auto-detect numeric column for revenue-like KPI
+            const possibleNumCols = ['revenue', 'prix', 'rate', 'price', 'valeur', 'total', 'ca'];
+            const numCol = activeCols.find(c => possibleNumCols.some(p => c.original.toLowerCase().includes(p)));
 
-            if (mainChart) mainChart.destroy();
+            if (numCol && displayData.length > 0) {
+                const avg = displayData.reduce((a, b) => a + (parseFloat(b[numCol.original]) || 0), 0) / displayData.length;
+                document.getElementById('kpi-avg').innerText = avg.toLocaleString('fr-FR', { maximumFractionDigits: 0 }) + " €";
+                document.getElementById('kpi-focus').innerText = numCol.label;
+            } else {
+                document.getElementById('kpi-avg').innerText = "0 €";
+                document.getElementById('kpi-focus').innerText = "N/A";
+            }
+        }
 
-            if (!dateCol || !valCol) {
-                // Background message or placeholder
-                return;
+        function renderTable() {
+            const head = document.getElementById('table-head');
+            const body = document.getElementById('table-body');
+
+            const activeCols = [...config.columns]
+                .filter(c => !c.hidden)
+                .sort((a, b) => a.order - b.order);
+
+            // Generate Header
+            head.innerHTML = `<tr>${activeCols.map(c => {
+                let cls = config.sortBy === c.original ? (config.sortDesc ? 'sort-desc' : 'sort-asc') : '';
+                return `<th class="${cls}" onclick="handleSort('${c.original}')">${c.label}</th>`;
+            }).join('')}</tr>`;
+
+            // Generate Rows
+            const rowsHtml = displayData.map(row => {
+                return `<tr>${activeCols.map(c => `<td>${row[c.original] !== null ? row[c.original] : '-'}</td>`).join('')}</tr>`;
+            }).join('');
+            body.innerHTML = rowsHtml;
+        }
+
+        function handleSort(colName) {
+            if (config.sortBy === colName) {
+                config.sortDesc = !config.sortDesc;
+            } else {
+                config.sortBy = colName;
+                config.sortDesc = false;
             }
 
-            // Sort data by date
-            const sorted = [...data].sort((a, b) => new Date(a[dateCol]) - new Date(b[dateCol]));
-            const labels = sorted.map(d => d[dateCol]);
-            const values = sorted.map(d => parseFloat(d[valCol]) || 0);
+            displayData.sort((a, b) => {
+                let valA = a[colName];
+                let valB = b[colName];
+
+                // Smart check for numbers
+                const numA = parseFloat(valA);
+                const numB = parseFloat(valB);
+                if (!isNaN(numA) && !isNaN(numB)) {
+                    valA = numA;
+                    valB = numB;
+                }
+
+                if (valA < valB) return config.sortDesc ? 1 : -1;
+                if (valA > valB) return config.sortDesc ? -1 : 1;
+                return 0;
+            });
+
+            renderTable();
+        }
+
+        function filterTable() {
+            const search = document.getElementById('table-search').value.toLowerCase();
+            if (!search) {
+                displayData = [...rawData];
+            } else {
+                displayData = rawData.filter(row => {
+                    return Object.values(row).some(v => String(v).toLowerCase().includes(search));
+                });
+            }
+            renderDashboard();
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('mainChart').getContext('2d');
+            const datePatterns = ['date', 'jour', 'debut', 'fin', 'timestamp', 'created_at'];
+            const valPatterns = ['revenue', 'prix', 'valeur', 'occupancy', 'total', 'ca', 'price'];
+
+            const dateCol = config.columns.find(c => datePatterns.some(p => c.original.toLowerCase().includes(p)));
+            const valCol = config.columns.find(c => valPatterns.some(p => c.original.toLowerCase().includes(p)));
+
+            if (mainChart) mainChart.destroy();
+            if (!dateCol || !valCol || displayData.length === 0) return;
+
+            // Simple aggregation by day
+            const summary = {};
+            displayData.forEach(d => {
+                let key = String(d[dateCol.original]).split('T')[0]; // Simple YYYY-MM-DD split
+                const val = parseFloat(d[valCol.original]) || 0;
+                summary[key] = (summary[key] || 0) + val;
+            });
+
+            const labels = Object.keys(summary).sort();
+            const values = labels.map(l => summary[l]);
 
             mainChart = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: valCol,
+                        label: valCol.label,
                         data: values,
                         borderColor: '#38bdf8',
-                        backgroundColor: 'rgba(56, 189, 248, 0.1)',
+                        backgroundColor: 'rgba(56, 189, 248, 0.05)',
                         fill: true,
-                        tension: 0.4,
+                        tension: 0.43,
                         borderWidth: 3,
-                        pointRadius: 2
+                        pointRadius: 3,
+                        pointBackgroundColor: '#38bdf8'
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
-                        x: { grid: { display: false }, ticks: { color: '#94a3b8', maxRotation: 45, minRotation: 45 } }
+                        y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                        x: { ticks: { color: '#94a3b8', maxRotation: 45 }, grid: { display: false } }
                     },
                     plugins: {
-                        legend: { display: false }
+                        legend: { display: false },
+                        tooltip: { backgroundColor: '#1e293b', titleColor: '#38bdf8', cornerRadius: 10 }
                     }
                 }
             });
+        }
+
+        // --- Column Settings Management ---
+
+        function openSettings() {
+            const modal = document.getElementById('modal-settings');
+            modal.style.display = 'flex';
+
+            const list = document.getElementById('col-list-config');
+            list.innerHTML = config.columns.sort((a, b) => a.order - b.order).map(c => `
+                <div class="col-item" draggable="true" ondragstart="colDragStart(event, '${c.original}')" ondragover="event.preventDefault()" ondrop="colDrop(event, '${c.original}')">
+                    <span style="cursor: grab; font-size: 1.2rem; color: #475569;">⋮⋮</span>
+                    <input type="checkbox" style="width:18px; height:18px;" ${!c.hidden ? 'checked' : ''} onchange="toggleColumnVisibility('${c.original}')">
+                    <span style="font-size: 0.75rem; color: #64748b; width: 120px; overflow:hidden; text-overflow:ellipsis;">${c.original}</span>
+                    <input type="text" value="${c.label}" onchange="changeColumnLabel('${c.original}', this.value)" placeholder="Nom d'affichage">
+                </div>
+            `).join('');
+        }
+
+        function toggleColumnVisibility(origName) {
+            const col = config.columns.find(x => x.original === origName);
+            if (col) col.hidden = !col.hidden;
+        }
+
+        function changeColumnLabel(origName, newLabel) {
+            const col = config.columns.find(x => x.original === origName);
+            if (col) col.label = newLabel;
+        }
+
+        function applySettings() {
+            renderDashboard();
+            closeSettings();
+        }
+
+        let draggedColName = null;
+        function colDragStart(ev, name) { draggedColName = name; }
+        function colDrop(ev, targetName) {
+            ev.preventDefault();
+            const fromIdx = config.columns.findIndex(c => c.original === draggedColName);
+            const toIdx = config.columns.findIndex(c => c.original === targetName);
+
+            // Swap orders
+            const oldOrder = config.columns[fromIdx].order;
+            config.columns[fromIdx].order = config.columns[toIdx].order;
+            config.columns[toIdx].order = oldOrder;
+
+            openSettings(); // Refresh view
+        }
+
+        function closeSettings() {
+            document.getElementById('modal-settings').style.display = 'none';
         }
 
         function showLoader(show) {
@@ -640,7 +887,7 @@
         }
 
         function refreshData() {
-            if (state.table) loadTableData(state.table);
+            if (currentTableName) loadTableData(currentTableName);
         }
 
     </script>

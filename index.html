@@ -7,249 +7,34 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
         rel="stylesheet">
     <style>
-        :root {
-            --primary: #4f46e5;
-            --primary-hover: #4338ca;
-            --bg: #f3f4f6;
-            --card-bg: #ffffff;
-            --text: #1f2937;
-            --text-light: #6b7280;
-            --border: #e5e7eb;
-            --success: #10b981;
-        }
-
-        body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            padding: 40px 20px;
-            background: var(--bg);
-            color: var(--text);
-        }
-
-        .container {
-            max-width: 900px;
-            margin: auto;
-            background: var(--card-bg);
-            padding: 40px;
-            border-radius: 16px;
-            box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.05);
-        }
-
-        header {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-
-        h1 {
-            margin: 0;
-            font-size: 28px;
-            background: linear-gradient(135deg, #4f46e5, #ec4899);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        p.subtitle {
-            color: var(--text-light);
-            margin-top: 8px;
-        }
-
-        .step-card {
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 24px;
-            transition: all 0.2s;
-            background: #fff;
-        }
-
-        .step-card:hover {
-            border-color: #cbd5e1;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
-        }
-
-        .step-title {
-            font-size: 16px;
-            font-weight: 700;
-            color: #374151;
-            margin-bottom: 16px;
+        /* Tabs */
+        .tabs {
             display: flex;
-            align-items: center;
             gap: 10px;
-        }
-
-        .step-number {
-            background: var(--primary);
-            color: white;
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 6px;
-            font-weight: 600;
-            font-size: 14px;
-            color: #4b5563;
-        }
-
-        input[type="text"],
-        input[type="file"],
-        select {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            font-size: 14px;
-            background: #f9fafb;
-            transition: 0.2s;
-        }
-
-        input:focus,
-        select:focus {
-            outline: none;
-            border-color: var(--primary);
-            ring: 2px solid #e0e7ff;
-            background: #fff;
-        }
-
-        .mode-options {
-            display: flex;
-            gap: 16px;
-            background: #f8fafc;
-            padding: 4px;
-            border-radius: 10px;
-            border: 1px solid var(--border);
-            width: fit-content;
             margin-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
         }
 
-        .mode-radio {
-            display: none;
-        }
-
-        .mode-label {
-            cursor: pointer;
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            color: #64748b;
-            transition: 0.2s;
-            user-select: none;
-        }
-
-        .mode-radio:checked+.mode-label {
-            background: white;
-            color: var(--primary);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-
-        .btn {
-            background: var(--primary);
-            color: white;
+        .tab-btn {
+            background: none;
             border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 14px;
-            transition: 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .btn:hover {
-            background: var(--primary-hover);
-            transform: translateY(-1px);
-        }
-
-        .btn.secondary {
-            background: white;
-            color: var(--text);
-            border: 1px solid var(--border);
-        }
-
-        .btn.secondary:hover {
-            background: #f9fafb;
-            border-color: #d1d5db;
-        }
-
-        .btn.full {
-            width: 100%;
-            justify-content: center;
-            margin-top: 20px;
             font-size: 16px;
-            padding: 14px;
-        }
-
-        .mapping-grid {
-            display: grid;
-            gap: 10px;
-            max-height: 400px;
-            overflow-y: auto;
-            padding-right: 5px;
-        }
-
-        .mapping-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            align-items: center;
-            padding: 10px;
-            background: #f8fafc;
-            border-radius: 8px;
-            border: 1px solid transparent;
-        }
-
-        .mapping-row:hover {
-            border-color: #e2e8f0;
-            background: #fff;
-        }
-
-        .col-source {
-            font-size: 13px;
             font-weight: 600;
-            color: #334155;
+            color: var(--text-light);
+            cursor: pointer;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: 0.2s;
         }
 
-        .hidden {
-            display: none !important;
+        .tab-btn.active {
+            background: #e0e7ff;
+            color: var(--primary);
         }
 
-        #result-area {
-            margin-top: 30px;
+        .tab-content {
             animation: fadeIn 0.3s ease;
-        }
-
-        .success-box {
-            background: #ecfdf5;
-            border: 1px solid #d1fae5;
-            padding: 20px;
-            border-radius: 12px;
-            color: #065f46;
-        }
-
-        .link-group {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
         }
     </style>
 </head>
@@ -259,15 +44,40 @@
     <div class="container">
         <header>
             <h1>RMS Supabase Sync</h1>
-            <p class="subtitle">Importez et transformez vos fichiers CSV vers Supabase en toute simplicité.</p>
+            <p class="subtitle">Import facile : CSV ou Excel vers Supabase.</p>
         </header>
 
-        <!-- STEP 1 -->
-        <div class="step-card">
-            <div class="step-title"><span class="step-number">1</span> Sélection du fichier</div>
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('csv')" id="tab-btn-csv">📄 Import CSV</button>
+            <button class="tab-btn" onclick="switchTab('excel')" id="tab-btn-excel">📊 Import Excel</button>
+        </div>
+
+        <!-- STEP 1: CSV -->
+        <div id="tab-csv" class="tab-content step-card">
+            <div class="step-title"><span class="step-number">1</span> Sélection du fichier CSV</div>
             <div style="display: flex; gap: 10px;">
                 <input type="file" id="csvFile" accept=".csv" />
-                <button class="btn" onclick="uploadFile()">Analyser</button>
+                <button class="btn" onclick="uploadCsv()">Analyser CSV</button>
+            </div>
+        </div>
+
+        <!-- STEP 1: EXCEL -->
+        <div id="tab-excel" class="tab-content step-card hidden">
+            <div class="step-title"><span class="step-number">1</span> Séléction du fichier Excel</div>
+            <div style="display: flex; gap: 10px; flex-direction: column;">
+                <div style="display: flex; gap: 10px;">
+                    <input type="file" id="excelFile" accept=".xlsx, .xls" />
+                    <button class="btn" onclick="uploadExcel()">Scanner le fichier</button>
+                </div>
+
+                <div id="excel-sheet-area" class="hidden"
+                    style="margin-top: 15px; padding-top:15px; border-top:1px dashed #eee;">
+                    <label>Choisir l'onglet à importer :</label>
+                    <div style="display:flex; gap:10px;">
+                        <select id="sheetSelect"></select>
+                        <button class="btn" onclick="confirmExcelSheet()">Valider cet onglet</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -330,12 +140,33 @@
     </div>
 
     <script>
-        let csvColumns = []; // Processed columns from backend (date split done)
+        let csvColumns = [];
         let dbColumns = [];
         let currentFilename = '';
+        let currentMode = 'csv'; // 'csv' or 'excel'
+        let currentSheet = '';
 
         // Init
         loadTables();
+
+        function switchTab(mode) {
+            currentMode = mode;
+            // UI Update
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`tab-btn-${mode}`).classList.add('active');
+
+            document.getElementById('tab-csv').classList.add('hidden');
+            document.getElementById('tab-excel').classList.add('hidden');
+            document.getElementById(`tab-${mode}`).classList.remove('hidden');
+
+            // Reset States
+            document.getElementById('step-config').classList.add('hidden');
+            document.getElementById('step-mapping').classList.add('hidden');
+            document.getElementById('result-area').innerHTML = '';
+            currentFilename = '';
+            currentSheet = '';
+            csvColumns = [];
+        }
 
         function normalizeStr(str) {
             return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -345,8 +176,6 @@
             const mode = document.querySelector('input[name="mode"]:checked').value;
             document.getElementById('opts-create').classList.toggle('hidden', mode !== 'create');
             document.getElementById('opts-append').classList.toggle('hidden', mode !== 'append');
-
-            // Re-render mapping if we have columns
             if (csvColumns.length) renderMapping();
         }
 
@@ -367,9 +196,10 @@
             } catch (e) { console.error(e); }
         }
 
-        async function uploadFile() {
+        // --- CSV LOGIC ---
+        async function uploadCsv() {
             const file = document.getElementById('csvFile').files[0];
-            if (!file) return alert("Sélectionnez un fichier");
+            if (!file) return alert("Sélectionnez un fichier CSV");
 
             const fd = new FormData();
             fd.append('file', file);
@@ -380,20 +210,83 @@
             if (data.error) return alert(data.error);
 
             currentFilename = data.filename;
-            csvColumns = data.columns; // Colonnes déjà splitées/cleanées par le backend
+            csvColumns = data.columns;
 
+            goToConfigStep();
+        }
+
+        // --- EXCEL LOGIC ---
+        async function uploadExcel() {
+            const file = document.getElementById('excelFile').files[0];
+            if (!file) return alert("Sélectionnez un fichier Excel");
+
+            const fd = new FormData();
+            fd.append('file', file);
+
+            // Show loading state
+            const btn = document.querySelector('#tab-excel button');
+            const originalText = btn.innerText;
+            btn.innerText = "⏳ Analyse...";
+
+            try {
+                const res = await fetch('/upload_excel', { method: 'POST', body: fd });
+                const data = await res.json();
+
+                if (data.error) throw new Error(data.error);
+
+                currentFilename = data.filename;
+
+                // Show sheets
+                const sel = document.getElementById('sheetSelect');
+                sel.innerHTML = '';
+                data.sheets.forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s;
+                    opt.innerText = s;
+                    sel.appendChild(opt);
+                });
+
+                document.getElementById('excel-sheet-area').classList.remove('hidden');
+
+            } catch (e) {
+                alert(e.message);
+            } finally {
+                btn.innerText = originalText;
+            }
+        }
+
+        async function confirmExcelSheet() {
+            currentSheet = document.getElementById('sheetSelect').value;
+            if (!currentSheet) return alert("Choisissez un onglet");
+
+            // Fetch columns for preview/mapping
+            const res = await fetch('/preview_excel', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ filename: currentFilename, sheet_name: currentSheet })
+            });
+            const data = await res.json();
+
+            if (data.error) return alert(data.error);
+
+            csvColumns = data.columns;
+            goToConfigStep();
+        }
+
+        function goToConfigStep() {
             document.getElementById('step-config').classList.remove('hidden');
             document.getElementById('step-mapping').classList.remove('hidden');
             renderMapping();
+            // Scroll to step 2
+            document.getElementById('step-config').scrollIntoView({ behavior: 'smooth' });
         }
 
         async function enableMapping() {
             const table = document.getElementById('existingTables').value;
             if (!table) return;
-
             const res = await fetch(`/tables/${table}/columns`);
             dbColumns = await res.json();
-            renderMapping(); // Re-render with db columns awareness
+            renderMapping();
         }
 
         function renderMapping() {
@@ -408,24 +301,15 @@
                 let rightSide = '';
 
                 if (mode === 'create') {
-                    // Checkbox simple
                     rightSide = `<div style="color:#64748b; font-size:13px;">✅ Sera créée auto</div>`;
                 } else {
-                    // Select mapping
                     if (dbColumns.length === 0) {
                         rightSide = `<span style="font-size:12px; color:#ef4444;">Choisir une table d'abord</span>`;
                     } else {
                         let bestMatch = "";
-                        // Auto-mapping intelligent (ignore accents)
-                        const cleanSource = normalizeStr(col); // ex: "reservation" depuis "Réservation" (si cleané par backend)
-
-                        // Si backend a déjà cleané 'col', c'est déjà 'reservation'.
-                        // Si backend a renvoyé 'Réservation', normalizeStr() le rendra 'reservation'.
-
+                        const cleanSource = normalizeStr(col);
                         dbColumns.forEach(db => {
                             if (normalizeStr(db.column_name) === cleanSource) bestMatch = db.column_name;
-                            // Fallback fuzzy ? 'date_d_achat' (db) vs 'Date d\'achat' (csv)
-                            // Si col="date_d_achat" (car splité backend), ça matchera "date_d_achat".
                         });
 
                         let opts = `<option value="">-- Ignorer --</option>`;
@@ -433,11 +317,9 @@
                             const sel = (db.column_name === bestMatch) ? 'selected' : '';
                             opts += `<option value="${db.column_name}" ${sel}>${db.column_name}</option>`;
                         });
-
                         rightSide = `<select class="map-select" data-src="${col}">${opts}</select>`;
                     }
                 }
-
                 row.innerHTML = `<div class="col-source">${col}</div><div>${rightSide}</div>`;
                 container.appendChild(row);
             });
@@ -451,9 +333,14 @@
                 save_storage: document.getElementById('saveStorage').checked
             };
 
+            // Excel specific
+            if (currentMode === 'excel') {
+                payload.sheet_name = currentSheet;
+            }
+
             if (mode === 'create') {
                 payload.table_name = document.getElementById('newTableName').value;
-                payload.columns = csvColumns; // On prend tout par défaut
+                payload.columns = csvColumns;
             } else {
                 payload.table_name = document.getElementById('existingTables').value;
                 const mapping = {};
@@ -472,8 +359,11 @@
 
             document.getElementById('result-area').innerHTML = '<div style="text-align:center; padding:20px;">⏳ Traitement en cours...</div>';
 
+            // Determine endpoint
+            const endpoint = (currentMode === 'excel') ? '/process_excel' : '/filter';
+
             try {
-                const res = await fetch('/filter', {
+                const res = await fetch(endpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -485,8 +375,9 @@
                     return;
                 }
 
-                let html = `<div class="success-box"><h3>🎉 Succès !</h3><p>${d.import_status}</p>`;
+                let html = `<div class="success-box"><h3>🎉 Succès !</h3><p>${d.message || d.import_status}</p>`; // Handle both response formats
 
+                // Show links only if present
                 html += `<div class="link-group">`;
                 if (d.download_url) html += `<a href="${d.download_url}" target="_blank" class="btn secondary">📥 CSV Local</a>`;
                 if (d.storage_url) html += `<a href="${d.storage_url}" target="_blank" class="btn secondary">☁️ Cloud (Storage)</a>`;
@@ -495,11 +386,10 @@
                 if (d.create_table_sql) {
                     html += `<details style="margin-top:15px; cursor:pointer;"><summary style="color:#64748b;">Voir SQL</summary><pre style="background:#1e293b; color:#fff; padding:10px; border-radius:6px; font-size:12px;">${d.create_table_sql}</pre></details>`;
                 }
-
                 document.getElementById('result-area').innerHTML = html;
 
             } catch (e) {
-                alert("Erreur réseau");
+                alert("Erreur réseau: " + e.message);
             }
         }
     </script>

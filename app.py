@@ -103,6 +103,10 @@ def process_excel_step2():
     if not filename or not sheet_name or not target_table_name:
         return jsonify({'error': 'Paramètres manquants'}), 400
     
+    # Nettoyage du nom de la table pour sécurité SQL si création
+    if mode == 'create':
+        target_table_name = clean_column_name(target_table_name)
+    
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     if not os.path.exists(filepath):
         return jsonify({'error': 'Fichier introuvable'}), 404

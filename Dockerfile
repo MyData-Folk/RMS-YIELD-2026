@@ -14,8 +14,11 @@ COPY . .
 # Créer les dossiers nécessaires
 RUN mkdir -p uploads outputs
 
-# Variables d'environnement (Coolify les injectera via docker-compose)
-# Ces lignes permettent de recevoir les variables au runtime
+# Recevoir les variables de Coolify comme ARG (build-time)
+ARG SUPABASE_URL
+ARG SUPABASE_KEY
+
+# Les convertir en ENV (runtime) pour que l'application puisse les lire
 ENV SUPABASE_URL=${SUPABASE_URL}
 ENV SUPABASE_KEY=${SUPABASE_KEY}
 

@@ -472,23 +472,17 @@
                 showLoader(true);
                 sbClient = supabase.createClient(url, key);
 
-                // Test connection by fetching tables (via RPC if exists or just schema check)
-                // Since we might not have 'exec_sql' exposed for public, we'll try a common pattern
-                // In a true standalone JS, we usually rely on public schemas or specific RPCs
-                const { data, error } = await sbClient.rpc('get_tables'); // Try our helper RPC
+                // Test connection and Fetch Tables using exec_sql (which we use in backend)
+                const { data, error } = await sbClient.rpc('exec_sql', {
+                    query: "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE' ORDER BY table_name;"
+                });
 
-                if (error) {
-                    // Fallback: Just try to list something common or alert
-                    console.error("RPC get_tables failed, attempting direct table check...");
-                    // If no RPC, user might need to create it. For now, we list tables manually meta
-                    const { data: listData, error: listError } = await sbClient.from('reservations').select('*', { count: 'exact', head: true });
-                    if (listError && listError.code !== 'PGRST116') throw listError;
-                }
+                if (error) throw new Error("Impossible de lister les tables : " + error.message);
 
                 document.getElementById('login-overlay').style.display = 'none';
                 document.getElementById('main-layout').style.display = 'grid';
 
-                initDashboard();
+                renderTableList(data || []);
             } catch (e) {
                 errorEl.innerText = "Connection failed: " + e.message;
                 errorEl.style.display = "block";
@@ -497,21 +491,26 @@
             }
         }
 
-        async function initDashboard() {
-            // Fill table list 
-            // NOTE: In production, you'd use a meta-query or the RPC we setup earlier
-            // For now, we manually fetch from our 'exec_sql' or similar if available
-            try {
-                const { data, error } = await sbClient.rpc('exec_sql', { query: "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE';" });
-                if (data) renderTableList(data);
-            } catch (e) {
-                console.warn("Could not fetch table list automatically.");
-            }
-        }
+        // initDashboard is no longer needed as table listing is handled directly in connect()
+        // async function initDashboard() {
+        //     // Fill table list 
+        //     // NOTE: In production, you'd use a meta-query or the RPC we setup earlier
+        //     // For now, we manually fetch from our 'exec_sql' or similar if available
+        //     try {
+        //         const { data, error } = await sbClient.rpc('exec_sql', { query: "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE';" });
+        //         if (data) renderTableList(data);
+        //     } catch (e) {
+        //         console.warn("Could not fetch table list automatically.");
+        //     }
+        // }
 
         function renderTableList(tables) {
             const list = document.getElementById('table-list');
             list.innerHTML = '';
+            if (tables.length === 0) {
+                list.innerHTML = '<li class="table-item" style="font-size:0.8rem; color:var(--accent);">Aucune table trouvée</li>';
+                return;
+            }
             tables.forEach(t => {
                 const name = t.table_name;
                 const li = document.createElement('li');

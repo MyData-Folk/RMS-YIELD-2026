@@ -56,8 +56,11 @@ def infer_sql_type(series):
 
     if 'heure' in col_name:
         return 'TEXT' # TIME est trop strict pour des CSV sales
-    elif 'date' in col_name or ('annulation' in col_name and 'heure' not in col_name):
-        return 'DATE' # Format ISO YYYY-MM-DD -> Compatible DATE SQL
+    elif 'date' in col_name:
+        # On ne se base QUE sur le mot 'date' pour être sûr. 
+        # 'date_d_annulation' contient 'date', donc ça marchera.
+        # 'motif_annulation' ne contient pas 'date', donc ce sera TEXT.
+        return 'DATE'
     elif 'int' in dtype:
         return 'BIGINT' # Au cas où
     elif 'float' in dtype:
@@ -107,6 +110,7 @@ def format_all_dates(df):
     df_formatted = df.copy()
     for col in df.columns:
         col_clean = col.lower()
+        # On ne touche QUE si 'date' est dans le nom (pas 'annulation' tout court)
         if 'date' in col_clean and 'heure' not in col_clean:
             temp_series = pd.to_datetime(
                 df[col],
@@ -367,9 +371,7 @@ def filter_columns():
             
             for i in range(0, len(records), batch_size):
                 batch = records[i:i + batch_size]
-                # DEBUG: Imprimer le premier record pour voir le format des dates
-                if i == 0:
-                    print(f"DEBUG FIRST RECORD: {json.dumps(batch[0], default=str)}", flush=True)
+                # supabase.table(target_table_name).insert(batch).execute()
                 
                 supabase.table(target_table_name).insert(batch).execute()
                 total_inserted += len(batch)

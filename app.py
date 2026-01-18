@@ -14,10 +14,15 @@ load_dotenv()
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
+# Debug: Vérifier si les variables sont chargées
+print(f"DEBUG: SUPABASE_URL = {SUPABASE_URL[:30] if SUPABASE_URL else 'None'}...")
+print(f"DEBUG: SUPABASE_KEY = {'Loaded' if SUPABASE_KEY else 'None'}")
+
 supabase: Client = None
 if SUPABASE_URL and SUPABASE_KEY:
     try:
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        print("DEBUG: Supabase client created successfully!")
     except Exception as e:
         print(f"Erreur init Supabase: {e}")
 

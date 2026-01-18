@@ -14,10 +14,15 @@ load_dotenv()
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
+# Debug: Vérifier si les variables sont chargées
+print(f"DEBUG: SUPABASE_URL = {SUPABASE_URL[:30] if SUPABASE_URL else 'None'}...")
+print(f"DEBUG: SUPABASE_KEY = {'Loaded' if SUPABASE_KEY else 'None'}")
+
 supabase: Client = None
 if SUPABASE_URL and SUPABASE_KEY:
     try:
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        print("DEBUG: Supabase client created successfully!")
     except Exception as e:
         print(f"Erreur init Supabase: {e}")
 
@@ -88,9 +93,9 @@ def split_datetime_columns(df):
         if col_fr in df.columns:
             temp_series = df[col_fr].apply(parse_datetime_safe)
             temp_series = pd.to_datetime(temp_series, errors='coerce')
-            # Modification: Format ISO YYYY-MM-DD pour compatibilité SQL
-            date_vals = temp_series.dt.strftime('%Y-%m-%d').where(temp_series.notna(), '')
-            time_vals = temp_series.dt.strftime('%H:%M:%S').where(temp_series.notna(), '')
+            # Modification: Format ISO YYYY-MM-DD pour compatibilité SQL, None pour dates vides
+            date_vals = temp_series.dt.strftime('%Y-%m-%d').where(temp_series.notna(), None)
+            time_vals = temp_series.dt.strftime('%H:%M:%S').where(temp_series.notna(), None)
             datetime_cols[date_col] = date_vals
             datetime_cols[time_col] = time_vals
             new_df.drop(columns=[col_fr], inplace=True)
@@ -113,8 +118,8 @@ def format_all_dates(df):
                 # Fallback générique
                 temp_series = pd.to_datetime(df[col], errors='coerce', dayfirst=True)
             
-            # Modification: Output en YYYY-MM-DD
-            df_formatted[col] = temp_series.dt.strftime('%Y-%m-%d').where(temp_series.notna(), '')
+            # Modification: Output en YYYY-MM-DD, mais None pour les dates invalides (pas "")
+            df_formatted[col] = temp_series.dt.strftime('%Y-%m-%d').where(temp_series.notna(), None)
     return df_formatted
 
 @app.route('/')
@@ -330,7 +335,9 @@ def filter_columns():
             
             # 2. Préparation des données
             import json
-            records = json.loads(df_filtered.to_json(orient='records', date_format='iso'))
+            # Remplacer None/NaN par np.nan pour que to_json les convertisse en null JSON
+            df_clean = df_filtered.fillna(value=pd.NA)
+            records = json.loads(df_clean.to_json(orient='records', date_format='iso'))
             
             # 3. Insertion par lots (batch)
             batch_size = 100

@@ -838,6 +838,40 @@
                 payload.is_lighthouse = state.isLighthouse;
             }
 
+            // Collect mapping and types
+            const mapping = {};
+            const types = {};
+            const colList = [];
+
+            document.querySelectorAll('.type-select').forEach(s => {
+                types[s.getAttribute('data-src')] = s.value;
+            });
+
+            document.querySelectorAll('.mapping-dest').forEach(s => {
+                const src = s.getAttribute('data-src');
+                if (s.tagName === 'SELECT') {
+                    if (s.value) {
+                        mapping[src] = s.value;
+                        colList.push(src);
+                    }
+                } else {
+                    if (s.value) {
+                        mapping[src] = s.value;
+                        colList.push(src);
+                    }
+                }
+            });
+
+            if (colList.length === 0) {
+                alert("Aucune colonne sélectionnée");
+                btn.innerHTML = originalText; btn.disabled = false;
+                return;
+            }
+
+            payload.column_mapping = mapping;
+            payload.columns = colList;
+            payload.column_types = types;
+
             if (state.mode === 'create') {
                 payload.table_name = document.getElementById('newTableName').value;
                 if (!payload.table_name) {
@@ -845,7 +879,6 @@
                     btn.innerHTML = originalText; btn.disabled = false;
                     return;
                 }
-                payload.columns = state.csvColumns;
             } else {
                 payload.table_name = document.getElementById('existingTables').value;
                 if (!payload.table_name) {
@@ -853,72 +886,23 @@
                     btn.innerHTML = originalText; btn.disabled = false;
                     return;
                 }
+            }
 
-                const mapping = {};
-                const types = {};
-                const colList = [];
+            // Endpoint switch
+            const endpoint = (state.fileType === 'excel') ? '/process_excel' : '/filter';
 
-                document.querySelectorAll('.type-select').forEach(s => {
-                    types[s.getAttribute('data-src')] = s.value;
+            try {
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
                 });
+                const d = await res.json();
 
-                document.querySelectorAll('.mapping-dest').forEach(s => {
-                    const src = s.getAttribute('data-src');
-                    if (s.tagName === 'SELECT') {
-                        if (s.value) {
-                            mapping[src] = s.value;
-                            colList.push(src);
-                        }
-                    } else {
-                        // Create mode input
-                        if (s.value) {
-                            mapping[src] = s.value;
-                            colList.push(src);
-                        }
-                    }
-                });
+                if (d.error) throw new Error(d.error);
 
-                if (colList.length === 0) {
-                    alert("Aucune colonne sélectionnée");
-                    btn.innerHTML = originalText; btn.disabled = false;
-                    return;
-                }
-
-                payload.column_mapping = mapping;
-                payload.columns = colList;
-                payload.column_types = types;
-
-                if (state.mode === 'create') {
-                    payload.table_name = document.getElementById('newTableName').value;
-                    if (!payload.table_name) {
-                        alert("Nom de table requis");
-                        btn.innerHTML = originalText; btn.disabled = false;
-                        return;
-                    }
-                } else {
-                    payload.table_name = document.getElementById('existingTables').value;
-                    if (!payload.table_name) {
-                        alert("Table destination requise");
-                        btn.innerHTML = originalText; btn.disabled = false;
-                        return;
-                    }
-                }
-
-                // Endpoint switch
-                const endpoint = (state.fileType === 'excel') ? '/process_excel' : '/filter';
-
-                try {
-                    const res = await fetch(endpoint, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                    const d = await res.json();
-
-                    if (d.error) throw new Error(d.error);
-
-                    // Success
-                    let html = `
+                // Success
+                let html = `
                     <div class="success-state">
                         <span class="success-icon">🎉</span>
                         <div class="success-msg">${d.message || d.import_status}</div>
@@ -928,17 +912,17 @@
                         </div>
                     </div>
                 `;
-                    document.getElementById('result-area').innerHTML = html;
-                    document.getElementById('result-area').scrollIntoView({ behavior: 'smooth' });
+                document.getElementById('result-area').innerHTML = html;
+                document.getElementById('result-area').scrollIntoView({ behavior: 'smooth' });
 
-                } catch (e) {
-                    alert("Erreur: " + e.message);
-                    document.getElementById('result-area').innerHTML = `<div style="padding:20px; background:#fef2f2; color:red; border-radius:12px; text-align:center;">❌ ${e.message}</div>`;
-                } finally {
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
-                }
+            } catch (e) {
+                alert("Erreur: " + e.message);
+                document.getElementById('result-area').innerHTML = `<div style="padding:20px; background:#fef2f2; color:red; border-radius:12px; text-align:center;">❌ ${e.message}</div>`;
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
             }
+        }
     </script>
 </body>
 
